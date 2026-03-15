@@ -1,5 +1,11 @@
 import axios from "axios";
 
+let authTokenGetter = null;
+
+export const setAuthTokenGetter = (getter) => {
+  authTokenGetter = getter;
+};
+
 const api = axios.create({
   baseURL: "/api", // Proxy will handle localhost:5001
   headers: {
@@ -7,10 +13,20 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use(async (config) => {
+  if (authTokenGetter) {
+    const token = await authTokenGetter();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
 export const fileService = {
   getFileSystem: () => api.get("/files"),
-  createFileNode: (name, type, parentId) =>
-    api.post("/files", { name, type, parentId }),
+  createFileNode: (name, type, parentId, link) =>
+    api.post("/files", { name, type, parentId, link }),
   deleteFileNode: (id) => api.delete(`/files/${id}`),
   updateFileNode: (id, data) => api.put(`/files/${id}`, data),
   getProblem: (fileId) => api.get(`/problems/${fileId}`),

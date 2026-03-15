@@ -5,8 +5,11 @@ const LearningSheet = require("../models/LearningSheet");
 const SheetProblem = require("../models/SheetProblem");
 const axios = require("axios");
 
-const FILE_SERVICE_URL = "http://127.0.0.1:5002/api/files";
-const PROBLEM_SERVICE_URL = "http://127.0.0.1:5003/api/problems";
+const FILE_SERVICE_URL =
+  (process.env.FILE_SERVICE_URL || "http://file-service:5002") + "/api/files";
+const PROBLEM_SERVICE_URL =
+  (process.env.PROBLEM_SERVICE_URL || "http://problem-service:5003") +
+  "/api/problems";
 
 /**
  * POST /api/youtube-playlist/import
@@ -208,6 +211,11 @@ async function deleteSheet(req, res) {
  */
 async function createFolderFromSheet(req, res) {
   const { id } = req.params;
+  const userId = req.headers["x-user-id"];
+
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
   try {
     // 1 ── Fetch the sheet + its problems ─────────────────────────────────
@@ -228,11 +236,17 @@ async function createFolderFromSheet(req, res) {
     }
 
     // 2 ── Create folder in file-service ──────────────────────────────────
-    const folderRes = await axios.post(FILE_SERVICE_URL, {
-      name: sheet.name,
-      type: "folder",
-      parentId: null,
-    });
+    const folderRes = await axios.post(
+      FILE_SERVICE_URL,
+      {
+        name: sheet.name,
+        type: "folder",
+        parentId: null,
+      },
+      {
+        headers: { "x-user-id": userId },
+      },
+    );
     const folderId = folderRes.data.id;
     console.log(
       `[Create Folder] Created folder "${sheet.name}" with id ${folderId}`,
@@ -245,12 +259,18 @@ async function createFolderFromSheet(req, res) {
     for (const problem of problems) {
       try {
         // Create the file node (file-service auto-creates the problem entry too)
-        const fileRes = await axios.post(FILE_SERVICE_URL, {
-          name: problem.title,
-          type: "file",
-          parentId: folderId,
-          link: problem.leetcode_link || "",
-        });
+        const fileRes = await axios.post(
+          FILE_SERVICE_URL,
+          {
+            name: problem.title,
+            type: "file",
+            parentId: folderId,
+            link: problem.leetcode_link || "",
+          },
+          {
+            headers: { "x-user-id": userId },
+          },
+        );
         const fileId = fileRes.data.id;
 
         // Give the auto-creation a moment to complete
@@ -273,15 +293,21 @@ async function createFolderFromSheet(req, res) {
           : [];
 
         // Update the problem entry with all stored data
-        await axios.put(`${PROBLEM_SERVICE_URL}/${fileId}`, {
-          title: problem.title,
-          slug: problem.title_slug,
-          difficulty: problem.difficulty,
-          description: problem.description || "",
-          exampleTestcases: "",
-          tags: [],
-          codeSnippets,
-        });
+        await axios.put(
+          `${PROBLEM_SERVICE_URL}/${fileId}`,
+          {
+            title: problem.title,
+            slug: problem.title_slug,
+            difficulty: problem.difficulty,
+            description: problem.description || "",
+            exampleTestcases: "",
+            tags: [],
+            codeSnippets,
+          },
+          {
+            headers: { "x-user-id": userId },
+          },
+        );
 
         filesCreated++;
         createdFiles.push({ fileId, title: problem.title });

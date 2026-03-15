@@ -8,14 +8,35 @@ const useFileStore = create((set, get) => ({
   isLoading: false,
   error: null,
 
+  resetForUser: () =>
+    set({
+      fileSystem: [],
+      activeFileId: null,
+      expandedFolders: [],
+      isLoading: false,
+      error: null,
+    }),
+
   // Fetch initial file tree
   loadFileSystem: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null });
     try {
       const response = await fileService.getFileSystem();
-      set({ fileSystem: response.data, isLoading: false });
+      set({
+        fileSystem: Array.isArray(response.data) ? response.data : [],
+        isLoading: false,
+      });
+      return true;
     } catch (error) {
-      set({ error: error.message, isLoading: false });
+      const message = error.response?.data?.message || error.message;
+      set({
+        fileSystem: [],
+        activeFileId: null,
+        error: message,
+        isLoading: false,
+      });
+      console.error("Failed to load file system", error);
+      return false;
     }
   },
 
@@ -82,9 +103,10 @@ const useFileStore = create((set, get) => ({
   clearExpandedFolders: () => set({ expandedFolders: [] }),
 
   // Add Item (API Call)
-  addItem: async (parentId, name, type) => {
+  addItem: async (parentId, name, type, link) => {
     try {
-      const res = await fileService.createFileNode(name, type, parentId);
+      set({ error: null });
+      const res = await fileService.createFileNode(name, type, parentId, link);
       const newItem = res.data;
       // Removed: Backend uses 'id' (Postgres), not '_id' (Mongo)
 
@@ -113,7 +135,10 @@ const useFileStore = create((set, get) => ({
       });
       return newItem; // Return the created item for usage
     } catch (error) {
+      const message = error.response?.data?.message || error.message;
+      set({ error: message });
       console.error("Failed to add item", error);
+      return null;
     }
   },
 

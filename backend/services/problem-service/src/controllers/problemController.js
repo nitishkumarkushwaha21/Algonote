@@ -1,15 +1,25 @@
 const Problem = require("../models/Problem");
 
+function getUserIdFromReq(req) {
+  return req.headers["x-user-id"];
+}
+
 // @desc    Get problem details by file ID
 // @route   GET /api/problems/:fileId
 exports.getProblem = async (req, res) => {
   try {
+    const userId = getUserIdFromReq(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const { fileId } = req.params;
-    
+
     // Find or create the problem to ensure we always have a valid database row
     const [problem] = await Problem.findOrCreate({
-      where: { fileId },
+      where: { fileId, userId },
       defaults: {
+        userId,
         title: "",
         slug: "",
         difficulty: "",
@@ -57,12 +67,18 @@ exports.getProblem = async (req, res) => {
 // @route   POST /api/problems
 exports.createProblem = async (req, res) => {
   try {
+    const userId = getUserIdFromReq(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const { fileId } = req.body;
 
     // Upsert (Create or Do Nothing if exists)
     const [problem, created] = await Problem.findOrCreate({
-      where: { fileId },
+      where: { fileId, userId },
       defaults: {
+        userId,
         notes: "",
         brute_solution: "",
         better_solution: "",
@@ -82,6 +98,11 @@ exports.createProblem = async (req, res) => {
 // @route   PUT /api/problems/:fileId
 exports.updateProblem = async (req, res) => {
   try {
+    const userId = getUserIdFromReq(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const { fileId } = req.params;
     const {
       solutions,
@@ -97,17 +118,18 @@ exports.updateProblem = async (req, res) => {
     } = req.body;
 
     // Find the problem first or create it if it doesn't exist
-    let problem = await Problem.findOne({ where: { fileId } });
+    let problem = await Problem.findOne({ where: { fileId, userId } });
     if (!problem) {
-        problem = await Problem.create({ 
-          fileId,
-          notes: "",
-          brute_solution: "",
-          better_solution: "",
-          optimal_solution: "",
-          time_complexity: "",
-          space_complexity: "", 
-        });
+      problem = await Problem.create({
+        userId,
+        fileId,
+        notes: "",
+        brute_solution: "",
+        better_solution: "",
+        optimal_solution: "",
+        time_complexity: "",
+        space_complexity: "",
+      });
     }
 
     // Flatten update object, only updating fields that are provided
@@ -140,7 +162,7 @@ exports.updateProblem = async (req, res) => {
     await problem.update(updateData);
 
     // Fetch the fully updated row to return it
-    const updated = await Problem.findOne({ where: { fileId } });
+    const updated = await Problem.findOne({ where: { fileId, userId } });
 
     res.json({
       id: updated.id,
@@ -167,7 +189,12 @@ exports.updateProblem = async (req, res) => {
 // @route   DELETE /api/problems/:fileId
 exports.deleteProblem = async (req, res) => {
   try {
-    await Problem.destroy({ where: { fileId: req.params.fileId } });
+    const userId = getUserIdFromReq(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    await Problem.destroy({ where: { fileId: req.params.fileId, userId } });
     res.json({ message: "Problem deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });

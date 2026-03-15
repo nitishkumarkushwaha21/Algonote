@@ -1,335 +1,270 @@
 # AlgoNote AI
 
-A production-level full-stack web application for DSA revision built for competitive programmers. AlgoNote AI lets you import LeetCode problems, write and save multi-approach solutions, take notes, analyze code complexity with AI, and generate structured study sheets from YouTube DSA playlists — all in one place.
+A full-stack DSA revision platform that helps you:
+- Organize problems like a mini IDE
+- Import real LeetCode questions in seconds
+- Write brute/better/optimal approaches side-by-side
+- Build structured revision sheets from YouTube playlists
+- Analyze your profile and weak areas
 
 ---
 
-## Features
+## Why AlgoNote
 
-### Core
+Most people use scattered tools for prep: browser tabs, notes apps, spreadsheets, random repos.
+AlgoNote brings everything into one workflow:
 
-- **File Explorer** — VS Code-style sidebar to organize problems into folders
-- **Problem Workspace** — split-panel editor with problem description on the left and code editor on the right
-- **Multi-solution tabs** — write Brute Force, Better, and Optimal solutions separately
-- **Notes** — per-problem notes saved to the database
-- **Complexity Analyzer** — AI-powered time & space complexity analysis of your code
-- **LeetCode Importer** — paste any LeetCode URL and auto-import the problem title, description, difficulty, tags, and starter code
+1. Discover problems
+2. Solve and document approaches
+3. Track revision progress
+4. Generate focused practice sets
 
-### Playlist Sheet Generator _(new)_
+---
 
-- Paste a YouTube DSA playlist URL
-- AI identifies the exact LeetCode problem for each video
-- Fetches full problem data from LeetCode's GraphQL API
-- Stores a structured DSA sheet in the database
-- **Add to Explorer** — creates a folder in the file explorer with one file per problem, pre-loaded with description and starter code
-- **Open on LeetCode** — button on every problem file to open the original question in a new tab
+## Main Features
+
+### 1. Smart Problem Workspace
+- Monaco-powered code editor
+- Separate tabs for Brute, Better, Optimal
+- Per-problem notes
+- Difficulty, tags, and metadata storage
+
+### 2. File Explorer Style Organization
+- Folder/file tree inspired by IDE explorers
+- Nested structures for topics and sheets
+- Rename, delete, and revision state management
+
+### 3. LeetCode Import
+- Paste a LeetCode URL
+- Automatically fetch:
+  - Title
+  - Difficulty
+  - Description
+  - Starter code snippets
+  - Topic tags
+
+### 4. YouTube Playlist to Revision Sheet
+- Paste a playlist URL
+- System maps each video to likely LeetCode problems
+- Creates a structured sheet with links and metadata
+- One-click import into explorer as ready-to-practice files
+
+### 5. Profile Analysis and Recommendations
+- Analyze LeetCode profile stats
+- Highlight weak areas
+- Generate topic-wise recommendations
+- Import weak-area questions directly into explorer
+
+### 6. Auth + User-Scoped Data
+- Clerk-based authentication in frontend
+- Token-based API calls
+- User-aware file tree loading
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    C[Client - React + Vite] --> G[API Gateway :5001]
+
+    G --> F[File Service :5002]
+    G --> P[Problem Service :5003]
+    G --> A[AI Service :5004]
+    G --> Y[YouTube Playlist Service :5005]
+    G --> R[Profile Analysis Service :5006]
+
+    F --> PG[(PostgreSQL)]
+    P --> PG
+    Y --> PG
+
+    R --> MG[(MongoDB)]
+
+    P --> LC[LeetCode GraphQL]
+    Y --> YT[YouTube Data API]
+    Y --> OR[OpenRouter / LLM]
+    R --> LC
+```
+
+---
+
+## Key User Flows
+
+### Flow A: Import LeetCode Problem
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant GW as Gateway
+    participant PS as Problem Service
+    participant LC as LeetCode API
+
+    U->>FE: Paste LeetCode URL
+    FE->>GW: POST /api/problems/import
+    GW->>PS: Forward request
+    PS->>LC: Query by titleSlug
+    LC-->>PS: Problem payload
+    PS-->>FE: Normalized data
+    FE->>GW: PUT /api/problems/:fileId
+    GW->>PS: Save problem details
+```
+
+### Flow B: YouTube Playlist to Explorer
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant GW as Gateway
+    participant YS as Playlist Service
+    participant YT as YouTube API
+    participant OR as OpenRouter
+    participant PS as Problem Service
+    participant FS as File Service
+
+    U->>FE: Submit playlist URL
+    FE->>GW: POST /api/youtube-playlist/import
+    GW->>YS: Forward request
+    YS->>YT: Fetch playlist videos
+    YS->>OR: Map video titles to LeetCode slugs
+    YS->>PS: Fetch full problem data
+    YS-->>FE: Sheet with matched problems
+    U->>FE: Click Add to Explorer
+    FE->>GW: POST /api/youtube-playlist/sheet/:id/create-folder
+    GW->>YS: Create folder flow
+    YS->>FS: Create folder/files
+    YS->>PS: Populate problem content
+```
 
 ---
 
 ## Tech Stack
 
 ### Frontend
-
-| Tech                   | Purpose                   |
-| ---------------------- | ------------------------- |
-| React 19               | UI framework              |
-| Vite                   | Build tool & dev server   |
-| Tailwind CSS v4        | Styling                   |
-| Zustand                | Global state management   |
-| React Router v7        | Client-side routing       |
-| Framer Motion          | Animations                |
-| Monaco Editor          | VS Code-style code editor |
-| Axios                  | HTTP client               |
-| Lucide React           | Icons                     |
-| React Resizable Panels | Split-panel layout        |
+- React (Vite)
+- React Router
+- Zustand
+- Tailwind CSS
+- Monaco Editor
+- Framer Motion
+- Axios
+- Clerk
 
 ### Backend
+- Node.js + Express microservices
+- API Gateway with proxy routing
+- Sequelize + PostgreSQL
+- Mongoose + MongoDB
+- Service-to-service HTTP with Axios
 
-| Tech                  | Purpose                                           |
-| --------------------- | ------------------------------------------------- |
-| Node.js + Express     | Microservices framework                           |
-| PostgreSQL            | Primary database                                  |
-| Sequelize ORM         | Database models & migrations                      |
-| OpenAI API            | Code complexity analysis (ai-service)             |
-| OpenRouter + DeepSeek | LeetCode problem identification from video titles |
-| YouTube Data API v3   | Fetch all videos from a playlist                  |
-| LeetCode GraphQL API  | Fetch problem content, difficulty, starter code   |
-| http-proxy-middleware | API gateway routing                               |
-| Axios                 | Inter-service HTTP calls                          |
-| dotenv                | Environment variable management                   |
-| CORS                  | Cross-origin request handling                     |
+### External Integrations
+- LeetCode GraphQL API
+- YouTube Data API v3
+- OpenRouter (LLM model routing)
 
 ---
 
-## Architecture
+## Repository Layout
 
-The backend follows a **microservices pattern** behind a single API gateway.
-
-```
-Client (React + Vite :5173)
-        │
-        │  /api/*
-        ▼
-  API Gateway (:5001)
-        │
-   ┌────┴────────────────────────────────────────┐
-   │              │              │                │
-   ▼              ▼              ▼                ▼
-File Service  Problem Service  AI Service   Playlist Service
-  (:5002)       (:5003)         (:5004)       (:5005)
-   │              │              │                │
-   └──────────────┴──────────────┴────────────────┘
-                          │
-                    PostgreSQL DB
-                    (algonote)
+```text
+.
+├── client/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── store/
+├── backend/
+│   ├── gateway/
+│   └── services/
+│       ├── file-service/
+│       ├── problem-service/
+│       ├── ai-service/
+│       ├── youtube-playlist-service/
+│       └── profile-analysis-service/
+├── docker-compose.yml
+└── start-backend.ps1
 ```
 
 ---
 
-## Project Structure
+## Quick Start
 
-```
-├── package.json                    # Root scripts (start:backend)
-├── start-backend.ps1               # PowerShell launcher for all services
-│
-├── client/                         # React frontend
-│   ├── index.html
-│   ├── vite.config.js              # Vite proxy → gateway :5001
-│   └── src/
-│       ├── App.jsx                 # Routes
-│       ├── main.jsx
-│       ├── components/
-│       │   ├── editor/
-│       │   │   └── CodeEditor.jsx          # Monaco editor wrapper
-│       │   ├── explorer/
-│       │   │   └── FileExplorer.jsx        # Sidebar file tree
-│       │   └── layout/
-│       │       ├── Layout.jsx              # App shell with sidebar
-│       │       └── ProblemWorkspace.jsx    # Split-panel editor page
-│       ├── pages/
-│       │   ├── Dashboard.jsx              # Home / folder view
-│       │   ├── FolderView.jsx             # Folder contents
-│       │   └── PlaylistFeaturePage.jsx    # YouTube → DSA Sheet generator
-│       ├── services/
-│       │   ├── api.js                     # File, problem, AI API calls
-│       │   └── playlistApi.js             # Playlist feature API calls
-│       └── store/
-│           └── useFileStore.js            # Zustand global store
-│
-└── backend/
-    ├── gateway/
-    │   └── server.js                      # Express proxy gateway (:5001)
-    │
-    └── services/
-        ├── file-service/                  # File system CRUD (:5002)
-        │   └── src/
-        │       ├── config/database.js
-        │       ├── controllers/fileController.js
-        │       ├── models/FileNode.js
-        │       └── routes/fileRoutes.js
-        │
-        ├── problem-service/               # Problem content CRUD (:5003)
-        │   └── src/
-        │       ├── config/database.js
-        │       ├── controllers/
-        │       │   ├── problemController.js
-        │       │   └── importController.js    # LeetCode scraper
-        │       ├── models/Problem.js
-        │       └── routes/problemRoutes.js
-        │
-        ├── ai-service/                    # OpenAI code analysis (:5004)
-        │   └── src/
-        │       ├── controllers/aiController.js
-        │       └── routes/aiRoutes.js
-        │
-        └── youtube-playlist-service/      # Playlist sheet generator (:5005)
-            └── src/
-                ├── config/database.js
-                ├── controllers/playlistController.js
-                ├── models/
-                │   ├── LearningSheet.js       # learning_sheets table
-                │   └── SheetProblem.js        # sheet_problems table
-                ├── routes/playlistRoutes.js
-                └── services/
-                    ├── youtubeService.js      # YouTube Data API
-                    ├── openrouterService.js   # DeepSeek via OpenRouter
-                    └── leetcodeService.js     # LeetCode GraphQL
-```
-
----
-
-## Database Schema
-
-### Existing tables (managed by Sequelize)
-
-| Table        | Description                                                |
-| ------------ | ---------------------------------------------------------- |
-| `file_nodes` | Folders and files in the explorer tree                     |
-| `problems`   | Problem content: description, solutions, notes, complexity |
-
-### Playlist feature tables (auto-created on service start)
-
-| Table             | Description                                                                                                            |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `learning_sheets` | Sheet metadata: name, playlist URL, created_at                                                                         |
-| `sheet_problems`  | Individual problems: title, slug, difficulty, description, starter code, YouTube link, LeetCode link, confidence score |
-
----
-
-## How the Playlist Feature Works
-
-```
-1. User pastes a YouTube playlist URL on PlaylistFeaturePage
-          │
-2. YouTube Data API v3
-   → Fetches all video titles + URLs from the playlist (handles pagination)
-          │
-3. OpenRouter API (DeepSeek model)
-   → For each video title, identifies the matching LeetCode problem
-   → Returns: { title, titleSlug, difficulty, confidence }
-   → Skips videos with confidence < 0.5 (intros, non-LeetCode content)
-          │
-4. LeetCode GraphQL API
-   → Fetches full problem data by titleSlug
-   → Returns: title, content (HTML), difficulty, exampleTestcases, codeSnippets
-          │
-5. PostgreSQL
-   → Stores sheet in learning_sheets
-   → Stores each problem in sheet_problems
-          │
-6. Frontend displays the sheet with expandable problem list
-          │
-7. "Add to Explorer" button
-   → Creates a folder in file-service (named after the sheet)
-   → Creates one file per problem inside that folder
-   → Pre-populates each problem entry with description + starter code
-   → Navigates to dashboard — folder appears instantly in sidebar
-          │
-8. Click any file → ProblemWorkspace opens with problem loaded
-   "LeetCode" button → opens original problem on leetcode.com
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js v18+
-- PostgreSQL (database name: `algonote`)
-- YouTube Data API v3 key
-- OpenRouter API key
-- OpenAI API key
-
-### Environment Variables
-
-**`backend/services/youtube-playlist-service/.env`**
-
-```env
-OPENROUTER_API_KEY=your_openrouter_key
-YOUTUBE_API_KEY=your_youtube_data_api_key
-DB_NAME=algonote
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=localhost
-PLAYLIST_SERVICE_PORT=5005
-```
-
-**`backend/services/ai-service/.env`**
-
-```env
-OPENAI_API_KEY=your_openai_key
-```
-
-**`backend/services/file-service/.env`** and **`backend/services/problem-service/.env`**
-
-```env
-DB_NAME=algonote
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=localhost
-```
-
-### Installation
+### 1. Install dependencies
 
 ```bash
-# Install root dependencies
 npm install
-
-# Install all service dependencies
-cd backend/gateway && npm install
+cd client && npm install
+cd ../backend/gateway && npm install
 cd ../services/file-service && npm install
 cd ../problem-service && npm install
 cd ../ai-service && npm install
 cd ../youtube-playlist-service && npm install
-
-# Install client dependencies
-cd ../../../../client && npm install
+cd ../profile-analysis-service && npm install
 ```
 
-### Running the App
+### 2. Configure environment
+Create required `.env` files for:
+- database credentials
+- API keys (LeetCode/OpenRouter/YouTube/OpenAI/Clerk as applicable)
 
+### 3. Run locally
+
+Backend (all services):
 ```bash
-# Terminal 1 — Start all backend services
 npm run start:backend
-
-# Terminal 2 — Start frontend
-cd client && npm run dev
 ```
 
-Or use the PowerShell script to launch each service in its own window:
-
-```powershell
-.\start-backend.ps1
+Frontend:
+```bash
+cd client
+npm run dev
 ```
-
-App runs at **http://localhost:5173**
-
-### Service Ports
-
-| Service                  | Port |
-| ------------------------ | ---- |
-| API Gateway              | 5001 |
-| File Service             | 5002 |
-| Problem Service          | 5003 |
-| AI Service               | 5004 |
-| YouTube Playlist Service | 5005 |
 
 ---
 
-## API Reference
+## Docker
 
-### File Service
+Use Docker Compose to run the full stack:
 
-| Method | Endpoint         | Description               |
-| ------ | ---------------- | ------------------------- |
-| GET    | `/api/files`     | Get full file system tree |
-| POST   | `/api/files`     | Create file or folder     |
-| PUT    | `/api/files/:id` | Update file metadata      |
-| DELETE | `/api/files/:id` | Delete file or folder     |
+```bash
+docker compose up --build
+```
 
-### Problem Service
+Services include:
+- client
+- gateway
+- file-service
+- problem-service
+- ai-service
+- youtube-playlist-service
+- profile-analysis-service
+- mongodb
 
-| Method | Endpoint                | Description                    |
-| ------ | ----------------------- | ------------------------------ |
-| GET    | `/api/problems/:fileId` | Get problem data               |
-| POST   | `/api/problems`         | Create problem entry           |
-| PUT    | `/api/problems/:fileId` | Update solutions/notes/content |
-| DELETE | `/api/problems/:fileId` | Delete problem                 |
-| POST   | `/api/problems/import`  | Import from LeetCode URL       |
+---
 
-### AI Service
+## API Overview
 
-| Method | Endpoint          | Description                          |
-| ------ | ----------------- | ------------------------------------ |
-| POST   | `/api/ai/analyze` | Analyze code time & space complexity |
+- `GET /api/files` - Fetch file tree
+- `POST /api/files` - Create file/folder
+- `GET /api/problems/:fileId` - Get problem content
+- `PUT /api/problems/:fileId` - Update problem content
+- `POST /api/problems/import` - Import from LeetCode URL
+- `POST /api/ai/*` - AI operations
+- `POST /api/youtube-playlist/import` - Import playlist
+- `POST /api/youtube-playlist/sheet/:id/create-folder` - Push sheet to explorer
+- `GET /api/profile-analysis/:username` - Analyze profile
+- `POST /api/profile-analysis/recommendations` - Topic recommendations
 
-### Playlist Service
+---
 
-| Method | Endpoint                                        | Description                        |
-| ------ | ----------------------------------------------- | ---------------------------------- |
-| POST   | `/api/youtube-playlist/import`                  | Import playlist and generate sheet |
-| GET    | `/api/youtube-playlist/sheets`                  | List all sheets                    |
-| GET    | `/api/youtube-playlist/sheet/:id`               | Get sheet with all problems        |
-| POST   | `/api/youtube-playlist/sheet/:id/create-folder` | Create explorer folder from sheet  |
-| DELETE | `/api/youtube-playlist/sheet/:id`               | Delete sheet                       |
+## Current Direction
+
+This project is evolving into a complete interview-prep operating system:
+- structured practice generation
+- integrated solving and note-taking
+- feedback loops from profile analytics
+- one-click revision workflows
+
+If you are preparing for coding interviews consistently, this setup is built to reduce friction and improve repetition quality.

@@ -12,7 +12,7 @@ import {
   Youtube,
   BarChart2,
   Home,
-  UserPlus
+  UserPlus,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useFileStore from "../../store/useFileStore";
@@ -131,15 +131,18 @@ const FileItem = ({ item, depth = 0 }) => {
           <span className="flex-1">{item.name}</span>
         )}
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleContextMenu(e);
-          }}
-          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-neutral-700 rounded transition-opacity"
-        >
-          <MoreHorizontal size={12} />
-        </button>
+        {!isRenaming && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleContextMenu(e);
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-neutral-700 rounded transition-opacity"
+            title="More"
+          >
+            <MoreHorizontal size={12} />
+          </button>
+        )}
       </div>
 
       {/* Context Menu */}
@@ -173,7 +176,7 @@ const FileItem = ({ item, depth = 0 }) => {
 };
 
 const FileExplorer = ({ onClose }) => {
-  const { fileSystem, loadFileSystem, addItem, expandedFolders } =
+  const { fileSystem, loadFileSystem, addItem, isLoading, error } =
     useFileStore();
   const [showAddMenu, setShowAddMenu] = useState(false);
   const navigate = useNavigate();
@@ -188,7 +191,10 @@ const FileExplorer = ({ onClose }) => {
   const handleAddFile = async () => {
     const name = prompt("Enter file name:");
     if (name) {
-      await addItem(null, name, "file");
+      const created = await addItem(null, name, "file");
+      if (!created) {
+        alert("Could not create file. Check backend services and try again.");
+      }
     }
     setShowAddMenu(false);
   };
@@ -196,7 +202,10 @@ const FileExplorer = ({ onClose }) => {
   const handleAddFolder = async () => {
     const name = prompt("Enter folder name:");
     if (name) {
-      await addItem(null, name, "folder");
+      const created = await addItem(null, name, "folder");
+      if (!created) {
+        alert("Could not create folder. Check backend services and try again.");
+      }
     }
     setShowAddMenu(false);
   };
@@ -209,8 +218,8 @@ const FileExplorer = ({ onClose }) => {
   }, []);
 
   return (
-    <div className="h-full bg-neutral-900 border-r border-neutral-800 select-none">
-      <div 
+    <div className="h-full bg-neutral-900 border-r border-neutral-800 select-none flex flex-col w-72 min-w-[18rem]">
+      <div
         className="flex items-center justify-between p-3 border-b border-neutral-800 cursor-pointer hover:bg-neutral-800/50 transition-colors"
         onClick={() => navigate("/")}
       >
@@ -258,14 +267,30 @@ const FileExplorer = ({ onClose }) => {
           )}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto py-2">
-        {fileSystem.map((item) => (
-          <FileItem key={item.id} item={item} />
-        ))}
+      <div className="flex-1 overflow-y-auto py-2 pr-1">
+        {isLoading ? (
+          <div className="px-3 py-2 text-sm text-gray-400">
+            Loading files...
+          </div>
+        ) : error ? (
+          <div className="px-3 py-2 text-sm text-red-400">
+            Failed to load files: {error}
+          </div>
+        ) : fileSystem.length === 0 ? (
+          <div className="px-3 py-2 text-sm text-gray-500">
+            No files yet. Use + to create your first file or folder.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {fileSystem.map((item) => (
+              <FileItem key={item.id} item={item} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Playlist & Analysis Feature Nav ── */}
-      <div className="border-t border-neutral-800 p-3 space-y-3">
+      <div className="border-t border-neutral-800 p-3 space-y-3 sticky bottom-20 bg-neutral-900">
         <button
           onClick={() => navigate("/profile-analysis")}
           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${
@@ -293,7 +318,7 @@ const FileExplorer = ({ onClose }) => {
       </div>
 
       {/* ── Account Nav (Dummy UI) ── */}
-      <div className="border-t border-neutral-800 p-3 mt-auto">
+      <div className="border-t border-neutral-800 p-3 mt-auto sticky bottom-0 bg-neutral-900">
         <button
           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium text-gray-300 hover:bg-neutral-800 hover:text-white transition-all"
           title="Login / Sign Up"

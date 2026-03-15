@@ -1,14 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import useFileStore from "../store/useFileStore";
-import { Folder } from "lucide-react";
+import { Folder, MoreVertical, Edit2, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Dashboard = () => {
-  const { fileSystem, addItem } = useFileStore();
+  const { fileSystem, addItem, renameItem, deleteItem } = useFileStore();
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openMenuId]);
 
   // Filter root level items
   const rootFolders = fileSystem.filter((item) => item.type === "folder");
@@ -24,6 +38,26 @@ const Dashboard = () => {
       setNewFolderName("");
     } catch (error) {
       console.error("Failed to create folder", error);
+    }
+  };
+
+  const handleRenameFolder = async (folder) => {
+    const name = prompt("Rename folder:", folder.name);
+    if (!name || !name.trim() || name.trim() === folder.name) return;
+    try {
+      await renameItem(folder.id, name.trim());
+    } catch (error) {
+      console.error("Failed to rename folder", error);
+    }
+  };
+
+  const handleDeleteFolder = async (folder) => {
+    const ok = confirm(`Delete folder "${folder.name}" and its contents?`);
+    if (!ok) return;
+    try {
+      await deleteItem(folder.id);
+    } catch (error) {
+      console.error("Failed to delete folder", error);
     }
   };
 
@@ -86,8 +120,48 @@ const Dashboard = () => {
           <div
             key={folder.id}
             onClick={() => navigate(`/folder/${folder.id}`)}
-            className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl hover:border-blue-600/50 hover:bg-neutral-800/50 transition-all cursor-pointer group"
+            className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl hover:border-blue-600/50 hover:bg-neutral-800/50 transition-all cursor-pointer group relative"
           >
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenMenuId((prev) =>
+                  prev === folder.id ? null : folder.id,
+                );
+              }}
+              className="absolute top-2 right-2 p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-neutral-700 transition-colors"
+              title="Folder actions"
+            >
+              <MoreVertical size={18} />
+            </button>
+
+            {openMenuId === folder.id && (
+              <div
+                ref={menuRef}
+                className="absolute top-12 right-2 z-20 bg-neutral-950 border border-neutral-700 rounded-lg shadow-xl py-1 min-w-36"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    setOpenMenuId(null);
+                    handleRenameFolder(folder);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-neutral-800 flex items-center gap-2"
+                >
+                  <Edit2 size={14} /> Rename
+                </button>
+                <button
+                  onClick={() => {
+                    setOpenMenuId(null);
+                    handleDeleteFolder(folder);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-red-900/30 flex items-center gap-2"
+                >
+                  <Trash2 size={14} /> Delete
+                </button>
+              </div>
+            )}
+
             <div className="mb-4 text-blue-500 group-hover:scale-110 transition-transform origin-left">
               <Folder size={40} />
             </div>
