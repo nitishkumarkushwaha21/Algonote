@@ -1,9 +1,56 @@
 const { Sequelize } = require("sequelize");
+const dns = require("dns");
+const { Resolver } = require("dns");
 const path = require("path");
 require("dotenv").config({
   path: path.resolve(__dirname, "../../../../../.env"),
 });
 require("dotenv").config();
+
+const resolver = new Resolver();
+resolver.setServers(["8.8.8.8", "8.8.4.4"]);
+dns.setDefaultResultOrder("ipv4first");
+const defaultLookup = dns.lookup.bind(dns);
+
+dns.lookup = (hostname, options, callback) => {
+  if (typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+
+  resolver.resolve4(hostname, (err, addresses) => {
+    if (!err && addresses && addresses.length > 0) {
+      callback(null, addresses[0], 4);
+      return;
+    }
+
+    defaultLookup(hostname, options, callback);
+  });
+};
+
+const originalSocketConnect = require("net").Socket.prototype.connect;
+require("net").Socket.prototype.connect = function (
+  portOrOpts,
+  hostOrCb,
+  ...rest
+) {
+  if (typeof portOrOpts === "number") {
+    const host = typeof hostOrCb === "string" ? hostOrCb : "localhost";
+    const cb = typeof hostOrCb === "function" ? hostOrCb : rest[0];
+    return originalSocketConnect.apply(
+      this,
+      cb
+        ? [{ port: portOrOpts, host, family: 4 }, cb]
+        : [{ port: portOrOpts, host, family: 4 }],
+    );
+  }
+
+  if (portOrOpts && typeof portOrOpts === "object") {
+    portOrOpts = Object.assign({}, portOrOpts, { family: 4 });
+  }
+
+  return originalSocketConnect.call(this, portOrOpts, hostOrCb, ...rest);
+};
 
 console.log(
   "[youtube-playlist-service] DATABASE_URL:",
