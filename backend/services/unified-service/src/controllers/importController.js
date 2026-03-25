@@ -1,8 +1,14 @@
 const { htmlToText } = require("html-to-text");
 const { getLeetCodeQuestion } = require("../services/leetcodeService");
+const { getUserIdFromReq } = require("../shared/requestContext");
 
 exports.importLeetCodeProblem = async (req, res) => {
   try {
+    const userId = getUserIdFromReq(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const { url } = req.body;
 
     if (!url) {

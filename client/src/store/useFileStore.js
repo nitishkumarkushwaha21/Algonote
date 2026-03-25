@@ -1,8 +1,12 @@
 import { create } from "zustand";
 import { fileService } from "../services/api";
-import { findTreeNode, removeTreeNode, updateTreeNode } from "../utils/fileTree";
+import {
+  findTreeNode,
+  removeTreeNode,
+  updateTreeNode,
+} from "../utils/fileTree";
 
-const FILE_SYSTEM_RETRY_DELAYS_MS = [400, 1200, 2500];
+const FILE_SYSTEM_RETRY_DELAYS_MS = [500, 1200, 2500, 4000, 6000];
 let loadFileSystemPromise = null;
 
 const defaultSolutionEntries = () => [
@@ -75,7 +79,11 @@ const useFileStore = create((set, get) => ({
     loadFileSystemPromise = (async () => {
       let lastError = null;
 
-      for (let attempt = 0; attempt <= FILE_SYSTEM_RETRY_DELAYS_MS.length; attempt += 1) {
+      for (
+        let attempt = 0;
+        attempt <= FILE_SYSTEM_RETRY_DELAYS_MS.length;
+        attempt += 1
+      ) {
         try {
           const response = await fileService.getFileSystem();
           set({
@@ -207,7 +215,9 @@ const useFileStore = create((set, get) => ({
   deleteItem: async (itemId) => {
     try {
       await fileService.deleteFileNode(itemId);
-      set((state) => ({ fileSystem: removeTreeNode(state.fileSystem, itemId) }));
+      set((state) => ({
+        fileSystem: removeTreeNode(state.fileSystem, itemId),
+      }));
     } catch (error) {
       console.error("Failed to delete item", error);
     }
@@ -234,9 +244,10 @@ const useFileStore = create((set, get) => ({
     // Debounced API call appropriate here, but for now direct call
     try {
       await fileService.updateProblem(fileId, {
-        solutionEntries: normalizeSolutionEntries(findTreeNode(get().fileSystem, fileId)).map(
-          (entry) =>
-            entry.id === solutionType ? { ...entry, code: newContent } : entry,
+        solutionEntries: normalizeSolutionEntries(
+          findTreeNode(get().fileSystem, fileId),
+        ).map((entry) =>
+          entry.id === solutionType ? { ...entry, code: newContent } : entry,
         ),
       });
     } catch (error) {
@@ -292,14 +303,14 @@ const useFileStore = create((set, get) => ({
         ...item,
         ...details,
         solutionEntries:
-          details.solutionEntries ?? item.solutionEntries ?? defaultSolutionEntries(),
+          details.solutionEntries ??
+          item.solutionEntries ??
+          defaultSolutionEntries(),
         analysis: {
           time: details.analysis?.time ?? item.analysis?.time ?? "",
           space: details.analysis?.space ?? item.analysis?.space ?? "",
           explanation:
-            details.analysis?.explanation ??
-            item.analysis?.explanation ??
-            "",
+            details.analysis?.explanation ?? item.analysis?.explanation ?? "",
         },
         solutions: {
           brute: details.solutions?.brute ?? item.solutions?.brute ?? "",

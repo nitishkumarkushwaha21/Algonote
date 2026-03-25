@@ -6,6 +6,15 @@ const {
 
 const LEETCODE_GRAPHQL = "https://leetcode.com/graphql/";
 
+function requireUserScope(req, res) {
+  const userId = req.headers["x-user-id"];
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+  return userId;
+}
+
 // GraphQL query for public profile stats
 const USER_STATS_QUERY = `
   query getUserProfile($username: String!) {
@@ -85,6 +94,11 @@ function getAuthenticatedUserId(req) {
  * GET /api/profile-analysis/:username
  */
 const analyzeProfile = async (req, res) => {
+  const ownerUserId = requireUserScope(req, res);
+  if (!ownerUserId) {
+    return;
+  }
+
   const { username } = req.params;
   if (!username?.trim())
     return res.status(400).json({ error: "Username is required." });
@@ -110,9 +124,9 @@ const analyzeProfile = async (req, res) => {
  * POST /api/profile-analysis/revision
  */
 const addRevision = async (req, res) => {
-  const ownerUserId = getAuthenticatedUserId(req);
+  const ownerUserId = requireUserScope(req, res);
   if (!ownerUserId) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
   const { username, problemName, difficulty, leetcodeUrl } = req.body;
@@ -153,9 +167,9 @@ const addRevision = async (req, res) => {
  * GET /api/profile-analysis/revision/:username
  */
 const getRevisions = async (req, res) => {
-  const ownerUserId = getAuthenticatedUserId(req);
+  const ownerUserId = requireUserScope(req, res);
   if (!ownerUserId) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
   const { username } = req.params;
@@ -177,9 +191,9 @@ const getRevisions = async (req, res) => {
  * DELETE /api/profile-analysis/revision/:id
  */
 const deleteRevision = async (req, res) => {
-  const ownerUserId = getAuthenticatedUserId(req);
+  const ownerUserId = requireUserScope(req, res);
   if (!ownerUserId) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
   try {
@@ -200,6 +214,11 @@ const deleteRevision = async (req, res) => {
  * Body: { weakAreas: string[], limit?: number }
  */
 const getRecommendations = async (req, res) => {
+  const ownerUserId = requireUserScope(req, res);
+  if (!ownerUserId) {
+    return;
+  }
+
   try {
     const weakAreas = Array.isArray(req.body?.weakAreas)
       ? req.body.weakAreas
@@ -227,9 +246,9 @@ const FILE_SERVICE_URL =
  * and one file per problem — mirrors how playlist createFolderFromSheet works.
  */
 const importWeakAreas = async (req, res) => {
-  const userId = req.headers["x-user-id"];
+  const userId = requireUserScope(req, res);
   if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
   const { problems } = req.body;

@@ -1,9 +1,14 @@
 import axios from "axios";
 
 let authTokenGetter = null;
+let authUserIdGetter = null;
 
 export const setAuthTokenGetter = (getter) => {
   authTokenGetter = getter;
+};
+
+export const setAuthUserIdGetter = (getter) => {
+  authUserIdGetter = getter;
 };
 
 const api = axios.create({
@@ -20,6 +25,14 @@ api.interceptors.request.use(async (config) => {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
+
+  if (authUserIdGetter) {
+    const userId = await authUserIdGetter();
+    if (userId) {
+      config.headers["x-user-id"] = userId;
+    }
+  }
+
   return config;
 });
 

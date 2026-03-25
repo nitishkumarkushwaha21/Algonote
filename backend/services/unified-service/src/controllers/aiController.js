@@ -1,4 +1,5 @@
 const OpenAI = require("openai");
+const { getUserIdFromReq } = require("../shared/requestContext");
 
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -14,6 +15,11 @@ function getOpenAIClient() {
 
 exports.analyzeCode = async (req, res) => {
   try {
+    const userId = getUserIdFromReq(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const openai = getOpenAIClient();
     if (!openai) {
       return res.status(503).json({

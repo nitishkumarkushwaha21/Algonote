@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAuth } from "@clerk/react";
-import { setAuthTokenGetter } from "../../services/api";
+import { setAuthTokenGetter, setAuthUserIdGetter } from "../../services/api";
 import useFileStore from "../../store/useFileStore";
 
 const AuthSetup = () => {
@@ -10,14 +10,17 @@ const AuthSetup = () => {
 
   useEffect(() => {
     setAuthTokenGetter(getToken);
+    setAuthUserIdGetter(() => userId || null);
 
     return () => {
       setAuthTokenGetter(null);
+      setAuthUserIdGetter(null);
     };
-  }, [getToken]);
+  }, [getToken, userId]);
 
   useEffect(() => {
     if (!isSignedIn || !userId) {
+      setAuthUserIdGetter(null);
       resetForUser();
       return;
     }
