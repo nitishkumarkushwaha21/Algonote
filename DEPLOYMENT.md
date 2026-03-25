@@ -23,6 +23,7 @@ Set these values in root `.env`:
 - `YOUTUBE_API_KEY`
 - `OPENAI_API_KEY` or `OPENROUTER_API_KEY`
 - `CLERK_SECRET_KEY`
+- `CLERK_PUBLISHABLE_KEY`
 - `VITE_CLERK_PUBLISHABLE_KEY`
 
 ## 3) Build and Start

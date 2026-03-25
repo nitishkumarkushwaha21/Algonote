@@ -9,6 +9,7 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 const hasClerkConfig = Boolean(process.env.CLERK_SECRET_KEY);
+const hasClerkPublishableKey = Boolean(process.env.CLERK_PUBLISHABLE_KEY);
 const isDevelopment = process.env.NODE_ENV === "development";
 const isProduction = process.env.NODE_ENV === "production";
 const enableDevAuthFallback =
@@ -36,6 +37,12 @@ if (isProduction) {
 if (!hasClerkConfig && !enableDevAuthFallback) {
   throw new Error(
     "[gateway] Missing CLERK_SECRET_KEY. For local-only fallback auth, run with NODE_ENV=development and ENABLE_DEV_AUTH_FALLBACK=true.",
+  );
+}
+
+if (hasClerkConfig && !hasClerkPublishableKey) {
+  throw new Error(
+    "[gateway] Missing CLERK_PUBLISHABLE_KEY while Clerk auth is enabled.",
   );
 }
 
