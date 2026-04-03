@@ -9,6 +9,7 @@ require("dotenv").config();
 const fileRoutes = require("./src/routes/fileRoutes");
 const problemRoutes = require("./src/routes/problemRoutes");
 const aiRoutes = require("./src/routes/aiRoutes");
+const statsRoutes = require("./src/routes/statsRoutes");
 
 const app = express();
 const PORT = process.env.UNIFIED_SERVICE_PORT || process.env.PORT || 5007;
@@ -33,6 +34,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/files", fileRoutes);
 app.use("/api/problems", problemRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/stats", statsRoutes);
 
 const MAX_RETRIES = 10;
 const RETRY_DELAY = 8000;

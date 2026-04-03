@@ -113,6 +113,7 @@ function createServiceProxy(target) {
 app.use("/api/files", createServiceProxy(`${FILE_SERVICE}/api/files`));
 app.use("/api/problems", createServiceProxy(`${PROBLEM_SERVICE}/api/problems`));
 app.use("/api/ai", createServiceProxy(`${AI_SERVICE}/api/ai`));
+app.use("/api/stats", createServiceProxy(`${UNIFIED_SERVICE}/api/stats`));
 app.use(
   "/api/youtube-playlist",
   createServiceProxy(`${PLAYLIST_SERVICE}/api/youtube-playlist`),

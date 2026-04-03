@@ -45,6 +45,14 @@ const Problem = sequelize.define(
       type: DataTypes.STRING,
       defaultValue: "",
     },
+    source: {
+      type: DataTypes.STRING,
+      defaultValue: "manual",
+    },
+    sourceUrl: {
+      type: DataTypes.STRING,
+      defaultValue: "",
+    },
     difficulty: {
       type: DataTypes.STRING,
       defaultValue: "Medium",
@@ -56,6 +64,14 @@ const Problem = sequelize.define(
     exampleTestcases: {
       type: DataTypes.TEXT,
       defaultValue: "",
+    },
+    constraints: {
+      type: DataTypes.TEXT,
+      defaultValue: "",
+    },
+    examples: {
+      type: DataTypes.JSON,
+      defaultValue: [],
     },
     codeSnippets: {
       type: DataTypes.JSON,

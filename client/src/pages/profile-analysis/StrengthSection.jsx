@@ -1,26 +1,35 @@
-import React from 'react';
+import React from "react";
+import { ShieldCheck } from "lucide-react";
 
 const StrengthSection = ({ strongTopics }) => {
   if (!strongTopics || strongTopics.length === 0) return null;
 
   return (
-    <div className="mb-6 rounded-[28px] border border-emerald-200/70 bg-[linear-gradient(140deg,rgba(236,253,245,0.96),rgba(255,255,255,0.96))] p-6 shadow-[0_24px_60px_-45px_rgba(16,185,129,0.9)] dark:border-emerald-900/60 dark:bg-[linear-gradient(140deg,rgba(6,78,59,0.55),rgba(15,23,42,0.96))]">
-      <div className="mb-6 flex items-center">
-        <div className="mr-4 rounded-2xl bg-emerald-500/15 p-3 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-300">
-          <span className="text-2xl">💪</span>
+    <div className="rounded-[24px] border border-emerald-400/12 bg-[#131f1b] p-5 shadow-[0_10px_28px_rgba(0,0,0,0.1)]">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="rounded-2xl border border-emerald-400/16 bg-emerald-500/10 p-3 text-emerald-300">
+          <ShieldCheck size={20} />
         </div>
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Strong Areas</h2>
-          <p className="mt-1 text-sm text-emerald-700/80 dark:text-emerald-200/80">
-            These are the topics where your repetition is building confidence.
+          <h2 className="text-xl font-semibold tracking-[-0.03em] text-white">
+            Strong Areas
+          </h2>
+          <p className="mt-1 text-sm text-emerald-200/72">
+            Topics where your repetition is already building confidence.
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-4">
+
+      <div className="flex flex-wrap gap-3">
         {strongTopics.map((topic, index) => (
-          <div key={index} className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-white/80 px-5 py-3 text-lg font-bold text-emerald-800 shadow-sm transition-colors hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/20 dark:text-emerald-200 dark:hover:bg-emerald-950/35">
-            <span>{topic.name}</span>
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{topic.solved} solved</span>
+          <div
+            key={index}
+            className="flex items-center gap-3 rounded-2xl border border-emerald-400/14 bg-emerald-500/8 px-4 py-3 text-emerald-100"
+          >
+            <span className="font-semibold">{topic.name}</span>
+            <span className="rounded-full border border-emerald-400/12 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+              {topic.solved} solved
+            </span>
           </div>
         ))}
       </div>

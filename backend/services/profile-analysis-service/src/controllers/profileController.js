@@ -1,6 +1,7 @@
 const axios = require("axios");
 const Revision = require("../models/Revision");
 const {
+  getQuestionBankForTopic,
   getTopicWiseRecommendations,
 } = require("../services/recommendationService");
 
@@ -233,6 +234,34 @@ const getRecommendations = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/profile-analysis/topic-questions
+ * Body: { topic: string }
+ */
+const getTopicQuestions = async (req, res) => {
+  const ownerUserId = requireUserScope(req, res);
+  if (!ownerUserId) {
+    return;
+  }
+
+  try {
+    const topic = String(req.body?.topic || "").trim();
+    if (!topic) {
+      return res.status(400).json({ error: "Topic is required." });
+    }
+
+    const data = getQuestionBankForTopic(topic);
+    if (!data) {
+      return res.status(404).json({ error: "Topic question bank not found." });
+    }
+
+    return res.json({ data });
+  } catch (err) {
+    console.error("getTopicQuestions error:", err.message);
+    return res.status(500).json({ error: "Failed to load topic questions." });
+  }
+};
+
 const FILE_SERVICE_URL =
   (process.env.FILE_SERVICE_URL ||
     process.env.UNIFIED_SERVICE_URL ||
@@ -343,5 +372,6 @@ module.exports = {
   getRevisions,
   deleteRevision,
   getRecommendations,
+  getTopicQuestions,
   importWeakAreas,
 };

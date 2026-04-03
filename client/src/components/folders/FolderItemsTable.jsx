@@ -5,11 +5,13 @@ import {
   Edit2,
   ExternalLink,
   FileCode,
+  FileText,
   Folder,
   Star,
   Trash2,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { getFileVisualType } from "../../utils/problemSources";
 
 const FolderItemsTable = ({
   items,
@@ -39,7 +41,9 @@ const FolderItemsTable = ({
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => (
+          {items.map((item) => {
+            const fileVisualType = getFileVisualType(item);
+            return (
             <tr
               key={item.id}
               className="fit-row"
@@ -49,6 +53,12 @@ const FolderItemsTable = ({
                 <div className="fit-name-cell">
                   {item.type === "folder" ? (
                     <Folder size={16} className="fit-icon-folder" />
+                  ) : fileVisualType === "notes" ? (
+                    <FileText size={16} className="fit-icon-notes" />
+                  ) : fileVisualType === "gfg" ? (
+                    <FileCode size={16} className="fit-icon-gfg" />
+                  ) : fileVisualType === "leetcode" ? (
+                    <FileCode size={16} className="fit-icon-leetcode" />
                   ) : (
                     <FileCode size={16} className="fit-icon-file" />
                   )}
@@ -66,7 +76,7 @@ const FolderItemsTable = ({
                   ) : (
                     <div className="fit-name-block">
                       <span className="fit-item-name">{item.name}</span>
-                      {item.type === "file" && (
+                      {item.type === "file" && fileVisualType !== "notes" && (
                         <div className="fit-meta-row">
                           {item.difficulty && (
                             <span className={clsx("fit-chip", `fit-chip-${item.difficulty.toLowerCase()}`)}>
@@ -143,7 +153,7 @@ const FolderItemsTable = ({
                     <button
                       onClick={(event) => onOpenLink(event, item)}
                       className="fit-action-btn fit-action-link"
-                      title="Open LeetCode"
+                      title="Open source problem"
                     >
                       <ExternalLink size={13} />
                     </button>
@@ -165,7 +175,8 @@ const FolderItemsTable = ({
                 </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </>
@@ -185,10 +196,10 @@ const tableCss = `
   .fit-head-row { border-bottom: 1px solid rgba(255,255,255,0.07); }
 
   .fit-th {
-    padding: 11px 12px;
+    padding: 10px 12px;
     font-size: 11px;
     font-weight: 500;
-    color: rgba(255,255,255,0.28);
+    color: rgba(255,255,255,0.34);
     letter-spacing: .08em;
     text-transform: uppercase;
     font-family: 'JetBrains Mono', monospace;
@@ -197,24 +208,27 @@ const tableCss = `
   .fit-th-right { text-align: right; padding-right: 20px; }
 
   .fit-row {
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
     cursor: pointer;
-    transition: background .13s;
+    transition: background .13s, border-color .13s;
   }
-  .fit-row:hover { background: rgba(255,255,255,0.03); }
-  .fit-row:hover .fit-actions { opacity: 1; }
+  .fit-row:hover {
+    background: rgba(255,255,255,0.025);
+    border-bottom-color: rgba(255,255,255,0.08);
+  }
 
   .fit-td {
-    padding: 12px;
+    padding: 10px 12px;
     font-size: 13px;
-    color: rgba(255,255,255,0.75);
+    color: rgba(255,255,255,0.78);
     vertical-align: middle;
   }
   .fit-td-pl { padding-left: 20px; }
   .fit-td-date {
-    color: rgba(255,255,255,0.28);
+    color: rgba(255,255,255,0.34);
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
+    white-space: nowrap;
   }
   .fit-td-actions { text-align: right; padding-right: 20px; }
 
@@ -222,24 +236,35 @@ const tableCss = `
   .fit-name-block { min-width: 0; }
   .fit-icon-folder { color: #7ab8f0; flex-shrink: 0; }
   .fit-icon-file { color: #f0c97a; flex-shrink: 0; }
-  .fit-item-name { font-weight: 500; color: rgba(255,255,255,0.85); }
+  .fit-icon-leetcode { color: #f4d03f; flex-shrink: 0; }
+  .fit-icon-gfg { color: #4ade80; flex-shrink: 0; }
+  .fit-icon-notes { color: #7dd3fc; flex-shrink: 0; }
+  .fit-item-name {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+  }
   .fit-meta-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-top: 6px;
+    margin-top: 4px;
     flex-wrap: wrap;
   }
   .fit-chip {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
-    padding: 3px 8px;
+    padding: 2px 7px;
     font-size: 10px;
     letter-spacing: .04em;
     text-transform: uppercase;
     border: 1px solid rgba(255,255,255,0.10);
-    color: rgba(255,255,255,0.62);
+    color: rgba(255,255,255,0.68);
     background: rgba(255,255,255,0.04);
   }
   .fit-chip-easy { color: #4ade80; border-color: rgba(74,222,128,0.22); background: rgba(74,222,128,0.10); }
@@ -253,7 +278,7 @@ const tableCss = `
     border-radius: 7px;
     border: 1px solid rgba(255,255,255,0.25);
     background: rgba(255,255,255,0.05);
-    padding: 3px 8px;
+    padding: 4px 8px;
     color: #fff;
     font-size: 13px;
     font-family: 'JetBrains Mono', monospace;
@@ -263,25 +288,26 @@ const tableCss = `
   .fit-state-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
   }
   .fit-toggle {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 4px 9px;
+    padding: 3px 8px;
     border-radius: 20px;
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
-    border: 1px solid rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.42);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.48);
     background: rgba(255,255,255,0.04);
     font-family: 'Inter', sans-serif;
     transition: opacity .15s, background .15s, color .15s, border-color .15s;
+    white-space: nowrap;
   }
-  .fit-toggle:hover { border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.86); }
+  .fit-toggle:hover { border-color: rgba(255,255,255,0.24); color: rgba(255,255,255,0.9); }
   .fit-toggle-solved {
     background: rgba(74,197,120,0.10);
     border-color: rgba(74,197,120,0.25);
@@ -297,32 +323,33 @@ const tableCss = `
     border-color: rgba(250,204,21,0.25);
     background: rgba(250,204,21,0.10);
   }
-  .fit-toggle-icon { padding-inline: 8px; }
+  .fit-toggle-icon { padding-inline: 7px; }
 
   .fit-actions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 4px;
-    opacity: 0;
+    gap: 6px;
+    opacity: 1;
     transition: opacity .15s;
   }
   .fit-action-btn {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 7px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
-    color: rgba(255,255,255,0.4);
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.045);
+    color: rgba(255,255,255,0.52);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background .13s, color .13s;
+    transition: background .13s, color .13s, border-color .13s;
   }
   .fit-action-btn:hover {
     background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.85);
+    color: rgba(255,255,255,0.88);
+    border-color: rgba(255,255,255,0.18);
   }
   .fit-action-del:hover {
     background: rgba(226,75,74,0.15);

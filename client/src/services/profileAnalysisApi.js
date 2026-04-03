@@ -32,6 +32,9 @@ const profileAnalysisApi = {
   getRecommendations: (body) =>
     api.post(`/profile-analysis/recommendations`, body),
 
+  getTopicQuestions: (topic) =>
+    api.post(`/profile-analysis/topic-questions`, { topic }),
+
   /**
    * Import weak-area problems into the file explorer (backend creates folders/files)
    * @param {{ problems: Array<{topic, problemName, difficulty, leetcodeUrl}> }} body

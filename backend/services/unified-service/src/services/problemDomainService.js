@@ -44,9 +44,13 @@ function formatProblemResponse(problem) {
     fileId: problem.fileId,
     title: problem.title || "",
     slug: problem.slug || "",
+    source: problem.source || "manual",
+    sourceUrl: problem.sourceUrl || "",
     difficulty: problem.difficulty || "",
     description: problem.description || "",
     exampleTestcases: problem.exampleTestcases || "",
+    constraints: problem.constraints || "",
+    examples: problem.examples || [],
     tags: problem.tags || [],
     codeSnippets: problem.codeSnippets || [],
     notes: problem.notes || "",
@@ -79,9 +83,13 @@ async function findOrCreateProblem({ fileId, userId }) {
       userId,
       title: "",
       slug: "",
+      source: "manual",
+      sourceUrl: "",
       difficulty: "",
       description: "",
       exampleTestcases: "",
+      constraints: "",
+      examples: [],
       tags: [],
       codeSnippets: [],
       solutionEntries: [
@@ -110,6 +118,10 @@ async function createProblemForFile({ fileId, userId, title }) {
       userId,
       fileId,
       title: title || "",
+      source: "manual",
+      sourceUrl: "",
+      constraints: "",
+      examples: [],
       solutionEntries: [
         {
           id: "optimal",
@@ -135,6 +147,10 @@ async function updateProblemByFileId({ fileId, userId, payload }) {
     problem = await Problem.create({
       userId,
       fileId,
+      source: "manual",
+      sourceUrl: "",
+      constraints: "",
+      examples: [],
       notes: "",
       solutionEntries: [
         {
@@ -157,9 +173,13 @@ async function updateProblemByFileId({ fileId, userId, payload }) {
     analysis,
     title,
     slug,
+    source,
+    sourceUrl,
     difficulty,
     description,
     exampleTestcases,
+    constraints,
+    examples,
     tags,
     codeSnippets,
     solutionEntries,
@@ -168,11 +188,15 @@ async function updateProblemByFileId({ fileId, userId, payload }) {
   const updateData = {};
   if (title !== undefined) updateData.title = title;
   if (slug !== undefined) updateData.slug = slug;
+  if (source !== undefined) updateData.source = source;
+  if (sourceUrl !== undefined) updateData.sourceUrl = sourceUrl;
   if (difficulty !== undefined) updateData.difficulty = difficulty;
   if (description !== undefined) updateData.description = description;
   if (exampleTestcases !== undefined) {
     updateData.exampleTestcases = exampleTestcases;
   }
+  if (constraints !== undefined) updateData.constraints = constraints;
+  if (examples !== undefined) updateData.examples = examples;
   if (tags !== undefined) updateData.tags = tags;
   if (codeSnippets !== undefined) updateData.codeSnippets = codeSnippets;
   if (solutionEntries !== undefined) updateData.solutionEntries = solutionEntries;

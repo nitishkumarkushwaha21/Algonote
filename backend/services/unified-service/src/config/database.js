@@ -47,7 +47,15 @@ require("net").Socket.prototype.connect = function (
   }
 
   if (portOrOpts && typeof portOrOpts === "object") {
-    portOrOpts = Object.assign({}, portOrOpts, { family: 4 });
+    const hasTcpTarget =
+      Number.isFinite(Number(portOrOpts.port)) ||
+      (typeof portOrOpts.host === "string" && portOrOpts.host.trim());
+    const usesPipePath =
+      typeof portOrOpts.path === "string" && portOrOpts.path.trim();
+
+    if (hasTcpTarget && !usesPipePath) {
+      portOrOpts = Object.assign({}, portOrOpts, { family: 4 });
+    }
   }
 
   return originalSocketConnect.call(this, portOrOpts, hostOrCb, ...rest);

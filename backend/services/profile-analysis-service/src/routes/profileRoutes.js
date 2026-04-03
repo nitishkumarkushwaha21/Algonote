@@ -6,12 +6,17 @@ const {
   getRevisions,
   deleteRevision,
   getRecommendations,
+  getTopicQuestions,
   importWeakAreas,
 } = require("../controllers/profileController");
 
 // Recommendations
 // POST /api/profile-analysis/recommendations
 router.post("/recommendations", express.json(), getRecommendations);
+
+// Topic question bank
+// POST /api/profile-analysis/topic-questions
+router.post("/topic-questions", express.json(), getTopicQuestions);
 
 // Import weak areas to Explorer (creates folder structure via file-service)
 // POST /api/profile-analysis/import-weak-areas

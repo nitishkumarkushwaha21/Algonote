@@ -3,6 +3,12 @@ import axios from "axios";
 let authTokenGetter = null;
 let authUserIdGetter = null;
 
+const isBrowser = typeof window !== "undefined";
+const devApiBaseUrl =
+  isBrowser && import.meta.env.DEV
+    ? `${window.location.protocol}//${window.location.hostname}:5001/api`
+    : "/api";
+
 export const setAuthTokenGetter = (getter) => {
   authTokenGetter = getter;
 };
@@ -12,7 +18,7 @@ export const setAuthUserIdGetter = (getter) => {
 };
 
 const api = axios.create({
-  baseURL: "/api", // Proxy will handle localhost:5001
+  baseURL: devApiBaseUrl,
   headers: {
     "Content-Type": "application/json",
   },
@@ -47,6 +53,11 @@ export const fileService = {
   updateProblem: (fileId, data) => api.put(`/problems/${fileId}`, data),
   analyzeCode: (code, language) => api.post("/ai/analyze", { code, language }),
   importProblem: (url) => api.post("/problems/import", { url }),
+};
+
+export const statsService = {
+  getLoginStats: () => api.get("/stats/logins"),
+  recordLogin: (sessionId) => api.post("/stats/logins", { sessionId }),
 };
 
 export default api;

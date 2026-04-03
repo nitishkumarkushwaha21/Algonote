@@ -3,8 +3,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   FolderPlus,
   Loader2,
   PencilLine,
@@ -13,11 +11,28 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import playlistApi from "../../services/playlistApi";
+import useFileStore from "../../store/useFileStore";
 import PlaylistProblemRow from "./PlaylistProblemRow";
 
+const buildDifficultyCounts = (items) =>
+  items.reduce(
+    (counts, problem) => {
+      if (problem.difficulty === "Easy") {
+        counts.easy += 1;
+      } else if (problem.difficulty === "Medium") {
+        counts.medium += 1;
+      } else if (problem.difficulty === "Hard") {
+        counts.hard += 1;
+      }
+
+      return counts;
+    },
+    { easy: 0, medium: 0, hard: 0 },
+  );
+
 const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
+  const loadFileSystem = useFileStore((state) => state.loadFileSystem);
   const [expanded, setExpanded] = useState(false);
   const [problems, setProblems] = useState([]);
   const [isLoadingProblems, setIsLoadingProblems] = useState(false);
@@ -27,7 +42,6 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftName, setDraftName] = useState(sheet.name);
   const [isSavingName, setIsSavingName] = useState(false);
-  const navigate = useNavigate();
 
   const handleStartRename = (event) => {
     event.stopPropagation();
@@ -90,8 +104,8 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
 
     try {
       await playlistApi.createFolderFromSheet(sheet.id);
+      await loadFileSystem({ force: true });
       setFolderCreated(true);
-      navigate("/");
     } catch (error) {
       setFolderError(
         error.response?.data?.error || error.message || "Failed to create folder",
@@ -101,21 +115,36 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
     }
   };
 
-  const easyCount = problems.filter((problem) => problem.difficulty === "Easy").length;
-  const mediumCount = problems.filter(
-    (problem) => problem.difficulty === "Medium",
-  ).length;
-  const hardCount = problems.filter((problem) => problem.difficulty === "Hard").length;
+  const difficultyCounts =
+    problems.length > 0
+      ? buildDifficultyCounts(problems)
+      : {
+          easy: Number(sheet.easy_count || 0),
+          medium: Number(sheet.medium_count || 0),
+          hard: Number(sheet.hard_count || 0),
+        };
+  const displayedProblemCount = problems.length || sheet.problem_count || 0;
 
   return (
-    <div className="mb-4 overflow-hidden rounded-[22px] border border-slate-500/14 bg-[#151922] shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
-      <div className="flex w-full items-start gap-4 px-5 py-4 text-left transition-colors hover:bg-[#1a202a]">
-        <div className="shrink-0 rounded-2xl border border-slate-500/16 bg-[#1d2330] p-2.5 text-white/80">
-          <PlayCircle size={20} />
+    <div className="mb-3 overflow-hidden rounded-[20px] border border-white/10 bg-[#141a24] shadow-[0_10px_28px_rgba(0,0,0,0.1)]">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleExpand}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleExpand();
+          }
+        }}
+        className="flex cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/78">
+          <PlayCircle size={16} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {isEditingName ? (
               <input
                 type="text"
@@ -131,56 +160,45 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
                   }
                 }}
                 autoFocus
-                className="h-10 min-w-0 flex-1 rounded-xl border border-slate-400/18 bg-[#10141c] px-3 text-sm font-semibold text-white outline-none focus:border-white/25 focus:bg-[#171c25]"
+                className="h-9 min-w-0 flex-1 rounded-xl border border-slate-400/18 bg-[#10141c] px-3 text-sm font-semibold text-white outline-none focus:border-white/25 focus:bg-[#171c25]"
               />
             ) : (
-              <p className="truncate text-base font-bold text-white">{sheet.name}</p>
+              <p className="truncate text-[15px] font-semibold text-white">
+                {sheet.name}
+              </p>
             )}
-            <span className="rounded-full border border-slate-500/16 bg-[#11151d] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/55">
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
               Sheet
             </span>
           </div>
 
-          <div className="mt-3 h-px w-20 bg-gradient-to-r from-white/20 to-transparent" />
-
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-slate-500/16 bg-[#10141c] px-3 py-1 text-xs font-semibold text-white/78">
-              {problems.length || sheet.problem_count || "?"} problems
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/72">
+              {displayedProblemCount} problems
             </span>
-            <span className="rounded-full border border-emerald-400/15 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-              {easyCount} Easy
+            <span className="rounded-full border border-emerald-400/15 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+              {difficultyCounts.easy} Easy
             </span>
-            <span className="rounded-full border border-amber-400/15 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
-              {mediumCount} Medium
+            <span className="rounded-full border border-amber-400/15 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-300">
+              {difficultyCounts.medium} Medium
             </span>
-            <span className="rounded-full border border-rose-400/15 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-300">
-              {hardCount} Hard
+            <span className="rounded-full border border-rose-400/15 bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-medium text-rose-300">
+              {difficultyCounts.hard} Hard
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[11px] text-white/48">
+              {new Date(sheet.created_at).toLocaleDateString()}
             </span>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-start gap-2">
-          <div className="hidden pt-1 text-right md:block">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-white/30">
-              Created
-            </div>
-            <div className="mt-1 text-sm text-zinc-400">
-              {new Date(sheet.created_at).toLocaleDateString()}
-            </div>
-          </div>
-
-          <button
-            className="shrink-0 rounded-2xl border border-slate-500/16 bg-[#10141c] p-2.5 text-white/55 transition hover:bg-[#181d27] hover:text-white"
-            title={expanded ? "Collapse problems" : "Expand problems"}
-            onClick={handleExpand}
-          >
-            {expanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
-          </button>
-
+        <div
+          className="flex shrink-0 items-center gap-1.5"
+          onClick={(event) => event.stopPropagation()}
+        >
           {isEditingName ? (
             <>
               <button
-                className="shrink-0 rounded-2xl border border-slate-500/16 bg-[#10141c] p-2.5 text-white/75 transition hover:bg-[#181d27]"
+                className="shrink-0 rounded-2xl border border-white/8 bg-white/[0.03] p-2 text-white/75 transition hover:bg-white/[0.06]"
                 title="Save name"
                 onClick={handleSaveRename}
                 disabled={isSavingName}
@@ -192,7 +210,7 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
                 )}
               </button>
               <button
-                className="shrink-0 rounded-2xl border border-slate-500/16 bg-[#10141c] p-2.5 text-white/55 transition hover:bg-[#181d27] hover:text-white"
+                className="shrink-0 rounded-2xl border border-white/8 bg-white/[0.03] p-2 text-white/50 transition hover:bg-white/[0.06] hover:text-white"
                 title="Cancel rename"
                 onClick={handleCancelRename}
               >
@@ -201,7 +219,7 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
             </>
           ) : (
             <button
-              className="shrink-0 rounded-2xl border border-slate-500/16 bg-[#10141c] p-2.5 text-white/55 transition hover:bg-[#181d27] hover:text-white"
+              className="shrink-0 rounded-2xl border border-white/8 bg-white/[0.03] p-2 text-white/50 transition hover:bg-white/[0.06] hover:text-white"
               title="Rename sheet"
               onClick={handleStartRename}
             >
@@ -210,10 +228,10 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
           )}
 
           <button
-            className={`shrink-0 rounded-2xl border px-3.5 py-2 text-sm font-semibold transition ${
+            className={`shrink-0 rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
               folderCreated
                 ? "cursor-default border-emerald-400/20 bg-emerald-500/15 text-emerald-200"
-                : "border-slate-500/16 bg-[#10141c] text-white/78 hover:bg-[#181d27]"
+                : "border-white/12 bg-white text-[#08111f] hover:bg-[#f2f7ff]"
             }`}
             title={
               folderCreated
@@ -242,7 +260,7 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
           </button>
 
           <button
-            className="shrink-0 rounded-2xl border border-slate-500/16 bg-[#10141c] p-2.5 text-white/45 transition hover:border-red-400/15 hover:bg-red-500/10 hover:text-red-300"
+            className="shrink-0 rounded-2xl border border-white/8 bg-white/[0.03] p-2 text-white/40 transition hover:border-red-400/15 hover:bg-red-500/10 hover:text-red-300"
             title="Delete sheet"
             onClick={(event) => {
               event.stopPropagation();
@@ -270,7 +288,7 @@ const PlaylistSheetCard = ({ sheet, onDelete, onRename }) => {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="space-y-2.5 border-t border-slate-500/12 bg-[#0f131b] px-5 pt-3.5 pb-5">
+            <div className="border-t border-white/10 bg-[#18212d] px-3 py-2">
               {isLoadingProblems ? (
                 <div className="flex items-center justify-center gap-3 py-12 text-zinc-500">
                   <Loader2 size={24} className="animate-spin text-white/70" />

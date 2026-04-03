@@ -58,6 +58,7 @@ async function requestJson(url, options = {}) {
   try {
     const response = await axios({
       url,
+      proxy: false,
       method: options.method || "GET",
       headers: {
         "Content-Type": "application/json",
@@ -100,6 +101,25 @@ async function requestJsonWithFallback(urls, options = {}) {
   }
 
   throw new Error(lastError?.message || "Request failed");
+}
+
+async function mapWithConcurrency(items, worker, concurrency = 4) {
+  const queue = [...items];
+  const results = [];
+
+  async function runWorker() {
+    while (queue.length > 0) {
+      const item = queue.shift();
+      results.push(await worker(item));
+    }
+  }
+
+  const workerCount = Math.min(concurrency, items.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, () => runWorker()),
+  );
+
+  return results;
 }
 
 function toSlug(text) {
@@ -595,74 +615,83 @@ async function createFolderFromSheet(req, res) {
     );
 
     // 3 ── Create a file for each problem ─────────────────────────────────
-    let filesCreated = 0;
-    const createdFiles = [];
+    const fileResults = await mapWithConcurrency(
+      problems,
+      async (problem) => {
+        try {
+          // Create the file node (file-service auto-creates the problem entry too)
+          const fileRes = await requestJsonWithFallback(FILE_SERVICE_URLS, {
+            method: "POST",
+            body: JSON.stringify({
+              name: problem.title,
+              type: "file",
+              parentId: folderId,
+              link: problem.leetcode_link || "",
+            }),
+            headers: { "x-user-id": userId },
+          });
+          const fileId = fileRes.id;
 
-    for (const problem of problems) {
-      try {
-        // Create the file node (file-service auto-creates the problem entry too)
-        const fileRes = await requestJsonWithFallback(FILE_SERVICE_URLS, {
-          method: "POST",
-          body: JSON.stringify({
-            name: problem.title,
-            type: "file",
-            parentId: folderId,
-            link: problem.leetcode_link || "",
-          }),
-          headers: { "x-user-id": userId },
-        });
-        const fileId = fileRes.id;
+          // Build codeSnippets array from the stored starter_code
+          const codeSnippets = problem.starter_code
+            ? [
+                {
+                  lang: "JavaScript",
+                  langSlug: "javascript",
+                  code: problem.starter_code,
+                },
+                {
+                  lang: "Python3",
+                  langSlug: "python3",
+                  code: problem.starter_code,
+                },
+              ]
+            : [];
 
-        // Give the auto-creation a moment to complete
-        await new Promise((r) => setTimeout(r, 150));
+          // Update the problem entry with all stored data
+          const problemUrls = PROBLEM_SERVICE_URLS.map(
+            (baseUrl) => `${baseUrl}/${fileId}`,
+          );
 
-        // Build codeSnippets array from the stored starter_code
-        const codeSnippets = problem.starter_code
-          ? [
-              {
-                lang: "JavaScript",
-                langSlug: "javascript",
-                code: problem.starter_code,
-              },
-              {
-                lang: "Python3",
-                langSlug: "python3",
-                code: problem.starter_code,
-              },
-            ]
-          : [];
+          await requestJsonWithFallback(problemUrls, {
+            method: "PUT",
+            body: JSON.stringify({
+              title: problem.title,
+              slug: problem.title_slug,
+              difficulty: problem.difficulty,
+              description: problem.description || "",
+              exampleTestcases: "",
+              tags: [],
+              codeSnippets,
+            }),
+            headers: { "x-user-id": userId },
+          });
 
-        // Update the problem entry with all stored data
-        const problemUrls = PROBLEM_SERVICE_URLS.map(
-          (baseUrl) => `${baseUrl}/${fileId}`,
-        );
+          console.log(
+            `[Create Folder] Created file "${problem.title}" (fileId ${fileId})`,
+          );
 
-        await requestJsonWithFallback(problemUrls, {
-          method: "PUT",
-          body: JSON.stringify({
+          return { ok: true, fileId, title: problem.title };
+        } catch (innerErr) {
+          console.error(
+            `[Create Folder] Failed for problem "${problem.title}":`,
+            innerErr.message,
+          );
+
+          return {
+            ok: false,
             title: problem.title,
-            slug: problem.title_slug,
-            difficulty: problem.difficulty,
-            description: problem.description || "",
-            exampleTestcases: "",
-            tags: [],
-            codeSnippets,
-          }),
-          headers: { "x-user-id": userId },
-        });
+            error: innerErr.message,
+          };
+        }
+      },
+      4,
+    );
 
-        filesCreated++;
-        createdFiles.push({ fileId, title: problem.title });
-        console.log(
-          `[Create Folder] Created file "${problem.title}" (fileId ${fileId})`,
-        );
-      } catch (innerErr) {
-        console.error(
-          `[Create Folder] Failed for problem "${problem.title}":`,
-          innerErr.message,
-        );
-      }
-    }
+    const createdFiles = fileResults
+      .filter((result) => result.ok)
+      .map(({ fileId, title }) => ({ fileId, title }));
+    const filesCreated = createdFiles.length;
 
     return res.status(201).json({
       folderId,

@@ -5,13 +5,21 @@ import {
   Panel,
   Separator as PanelResizeHandle,
 } from "react-resizable-panels";
-import { Loader2 } from "lucide-react";
 import CodeEditor from "../../components/editor/CodeEditor";
 import ProblemComplexityFields from "../../components/problem/ProblemComplexityFields";
 import ProblemMetadataPanel from "../../components/problem/ProblemMetadataPanel";
+import NotesEditorPanel from "../../components/problem/NotesEditorPanel";
 import ProblemSolutionTabs from "../../components/problem/ProblemSolutionTabs";
+import { ProblemEditorSkeleton } from "../../components/skeletons/ContentSkeletons";
 import { fileService } from "../../services/api";
 import useFileStore from "../../store/useFileStore";
+import {
+  ensureNotesFileName,
+  detectProblemSource,
+  getProblemSourceLabel,
+  isNotesFileName,
+  stripNotesExtension,
+} from "../../utils/problemSources";
 import { findTreeNode } from "../../utils/fileTree";
 
 const findParentFolder = (nodes, targetId, parent = null) => {
@@ -34,8 +42,16 @@ const findParentFolder = (nodes, targetId, parent = null) => {
 const buildImportedProblemState = (problemData) => ({
   title: problemData.title,
   slug: problemData.slug,
+  source: problemData.source,
+  sourceUrl: problemData.sourceUrl,
   difficulty: problemData.difficulty,
-  description: problemData.description || problemData.descriptionText || "",
+  description:
+    problemData.descriptionHtml ||
+    problemData.description ||
+    problemData.descriptionText ||
+    "",
+  constraints: problemData.constraints || "",
+  examples: problemData.examples || [],
   tags: problemData.tags || [],
   exampleTestcases: problemData.exampleTestcases || "",
   codeSnippets: problemData.codeSnippets || [],
@@ -50,12 +66,15 @@ const ProblemEditorPage = () => {
     setActiveFile,
     updateFileAnalysis,
     updateFileContent,
+    updateFileNotes,
     updateSolutionEntries,
   } = useFileStore();
   const { fileSystem: allFiles, isLoading } = useFileStore();
   const [activeTab, setActiveTab] = useState("optimal");
   const [isImporting, setIsImporting] = useState(false);
+  const [isProblemLoading, setIsProblemLoading] = useState(true);
   const [problemRecord, setProblemRecord] = useState(null);
+  const [noteDraft, setNoteDraft] = useState("");
 
   const activeFile = id ? findTreeNode(fileSystem, id) : null;
   const [localLink, setLocalLink] = useState(activeFile?.link || "");
@@ -66,10 +85,14 @@ const ProblemEditorPage = () => {
         ...problemRecord,
         title: problemRecord?.title ?? activeFile.title,
         slug: problemRecord?.slug ?? activeFile.slug,
+        source: problemRecord?.source ?? activeFile.source,
+        sourceUrl: problemRecord?.sourceUrl ?? activeFile.sourceUrl,
         difficulty: problemRecord?.difficulty ?? activeFile.difficulty,
         description: problemRecord?.description ?? activeFile.description,
         exampleTestcases:
           problemRecord?.exampleTestcases ?? activeFile.exampleTestcases,
+        constraints: problemRecord?.constraints ?? activeFile.constraints,
+        examples: problemRecord?.examples ?? activeFile.examples,
         codeSnippets: problemRecord?.codeSnippets ?? activeFile.codeSnippets,
         tags: problemRecord?.tags ?? activeFile.tags,
         notes: problemRecord?.notes ?? activeFile.notes,
@@ -86,6 +109,7 @@ const ProblemEditorPage = () => {
   const solutionEntries = problemView?.solutionEntries?.length
     ? problemView.solutionEntries
     : [{ id: "optimal", label: "Optimal", code: "" }];
+  const isNotesFile = isNotesFileName(activeFile?.name || "");
   const parentFolder = id ? findParentFolder(fileSystem, id) : null;
   const siblingProblems = (parentFolder?.children || [])
     .filter((item) => item.type === "file")
@@ -95,12 +119,18 @@ const ProblemEditorPage = () => {
   );
   const nextProblem =
     currentProblemIndex >= 0 ? siblingProblems[currentProblemIndex + 1] : null;
+  const previousProblem =
+    currentProblemIndex > 0 ? siblingProblems[currentProblemIndex - 1] : null;
 
   useEffect(() => {
     if (activeFile && activeFile.link !== localLink && !isImporting) {
       setLocalLink(activeFile.link || "");
     }
   }, [activeFile, isImporting, localLink]);
+
+  useEffect(() => {
+    setNoteDraft(problemView?.notes || "");
+  }, [problemView?.id, problemView?.notes]);
 
   useEffect(() => {
     if (!solutionEntries.some((entry) => entry.id === activeTab)) {
@@ -118,20 +148,24 @@ const ProblemEditorPage = () => {
   useEffect(() => {
     if (!id) {
       setProblemRecord(null);
+      setIsProblemLoading(false);
       return undefined;
     }
 
     let isCancelled = false;
+    setIsProblemLoading(true);
 
     const loadProblemRecord = async () => {
       try {
         const { data } = await fileService.getProblem(id);
         if (!isCancelled) {
           setProblemRecord(data);
+          setIsProblemLoading(false);
         }
       } catch (error) {
         if (!isCancelled) {
           console.error("Failed to load problem record", error);
+          setIsProblemLoading(false);
         }
       }
     };
@@ -143,13 +177,30 @@ const ProblemEditorPage = () => {
     };
   }, [id]);
 
-  if (isLoading || (allFiles.length === 0 && id)) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center bg-neutral-900 text-gray-500">
-        <Loader2 className="mb-4 animate-spin" size={32} />
-        Loading workspace...
-      </div>
-    );
+  useEffect(() => {
+    if (!isNotesFile || !activeFileId || noteDraft === (problemView?.notes || "")) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      updateFileNotes(activeFileId, noteDraft);
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeFileId, isNotesFile, noteDraft, problemView?.notes, updateFileNotes]);
+
+  const showProblemSkeleton =
+    isLoading ||
+    (allFiles.length === 0 && id) ||
+    (!isNotesFile &&
+      !!id &&
+      (!!activeFile || allFiles.length > 0) &&
+      isProblemLoading &&
+      !problemRecord &&
+      !(activeFile?.description || activeFile?.solutionEntries?.length));
+
+  if (showProblemSkeleton) {
+    return <ProblemEditorSkeleton />;
   }
 
   if (!activeFile) {
@@ -202,9 +253,11 @@ const ProblemEditorPage = () => {
 
   const handleImportQuestion = async () => {
     const sourceLink = localLink.trim();
+    const source = detectProblemSource(sourceLink);
+    const sourceLabel = getProblemSourceLabel(source);
 
-    if (!sourceLink || !sourceLink.includes("leetcode.com/problems/")) {
-      window.alert("Paste a valid LeetCode problem link first.");
+    if (!sourceLink || !source) {
+      window.alert("Paste a valid LeetCode or GFG problem link first.");
       return;
     }
 
@@ -227,9 +280,13 @@ const ProblemEditorPage = () => {
       await fileService.updateProblem(activeFile.id, {
         title: problemData.title,
         slug: problemData.slug,
+        source: problemData.source,
+        sourceUrl: problemData.sourceUrl || sourceLink,
         difficulty: problemData.difficulty,
-        description: resolvedDescription,
+        description: problemData.descriptionHtml || resolvedDescription,
         exampleTestcases: problemData.exampleTestcases,
+        constraints: problemData.constraints,
+        examples: problemData.examples,
         codeSnippets: problemData.codeSnippets,
         tags: problemData.tags,
       });
@@ -244,9 +301,13 @@ const ProblemEditorPage = () => {
       useFileStore.getState().mergeProblemDetails(activeFile.id, {
         title: problemData.title,
         slug: problemData.slug,
+        source: problemData.source,
+        sourceUrl: problemData.sourceUrl || sourceLink,
         difficulty: problemData.difficulty,
-        description: resolvedDescription,
+        description: problemData.descriptionHtml || resolvedDescription,
         exampleTestcases: problemData.exampleTestcases,
+        constraints: problemData.constraints,
+        examples: problemData.examples,
         codeSnippets: problemData.codeSnippets,
         tags: problemData.tags,
       });
@@ -256,7 +317,9 @@ const ProblemEditorPage = () => {
     } catch (error) {
       console.error("Failed to import problem:", error);
       window.alert(
-        `Failed to import problem: ${error.message || "Unknown error"}`,
+        `Failed to import ${sourceLabel}: ${
+          error.response?.data?.message || error.message || "Unknown error"
+        }`,
       );
     } finally {
       setIsImporting(false);
@@ -304,15 +367,13 @@ const ProblemEditorPage = () => {
     }
   };
 
-  const handleMoveSolution = async (fromIndex, toIndex) => {
-    if (toIndex < 0 || toIndex >= solutionEntries.length) {
+  const handlePrevProblem = async () => {
+    if (!previousProblem) {
       return;
     }
 
-    const nextEntries = [...solutionEntries];
-    const [moved] = nextEntries.splice(fromIndex, 1);
-    nextEntries.splice(toIndex, 0, moved);
-    await persistSolutionEntries(nextEntries);
+    await setActiveFile(previousProblem.id);
+    navigate(`/problem/${previousProblem.id}`);
   };
 
   const handleNextProblem = async () => {
@@ -324,68 +385,86 @@ const ProblemEditorPage = () => {
     navigate(`/problem/${nextProblem.id}`);
   };
 
+  if (isNotesFile) {
+    return (
+      <NotesEditorPanel
+        title={stripNotesExtension(activeFile?.name || problemView?.name || "")}
+        notes={noteDraft}
+        onChange={setNoteDraft}
+        onClose={() => navigate(-1)}
+        onRename={async (nextName) => {
+          await useFileStore
+            .getState()
+            .renameItem(activeFile.id, ensureNotesFileName(nextName));
+        }}
+      />
+    );
+  }
+
   return (
-    <PanelGroup direction="horizontal" className="group h-full">
-      <Panel
-        defaultSize={40}
-        minSize={20}
-        className="border-r border-neutral-800 bg-neutral-900"
-      >
-        <ProblemMetadataPanel
-          activeFile={problemView}
-          isImporting={isImporting}
-          localLink={localLink}
-          onLinkChange={setLocalLink}
-          onLinkBlur={handleLinkBlur}
-          onImportClick={handleImportQuestion}
-        />
-      </Panel>
-
-      <PanelResizeHandle className="w-1 bg-neutral-800 transition-colors group-hover:bg-blue-600" />
-
-      <Panel defaultSize={60} minSize={20} className="bg-neutral-900">
-        <div className="flex h-full flex-col">
-          <ProblemSolutionTabs
-            activeTab={activeTab}
-            solutions={solutionEntries}
-            onAdd={handleAddSolution}
-            onChange={setActiveTab}
-            onDelete={handleDeleteSolution}
-            onMoveLeft={(index) => handleMoveSolution(index, index - 1)}
-            onMoveRight={(index) => handleMoveSolution(index, index + 1)}
-            onRename={handleRenameSolution}
+    <div className="h-full bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_26%),#090909]">
+      <PanelGroup direction="horizontal" className="group h-full">
+        <Panel
+          defaultSize={40}
+          minSize={20}
+          className="border-r border-white/6 bg-neutral-900"
+        >
+          <ProblemMetadataPanel
+            activeFile={problemView}
+            isImporting={isImporting}
+            localLink={localLink}
+            onLinkChange={setLocalLink}
+            onLinkBlur={handleLinkBlur}
+            onImportClick={handleImportQuestion}
           />
+        </Panel>
 
-          <div className="min-h-0 flex-1">
-            <CodeEditor
-              code={
-                solutionEntries.find((entry) => entry.id === activeTab)?.code || ""
-              }
-              language="javascript"
-              onChange={(newCode) => {
-                const nextEntries = solutionEntries.map((entry) =>
-                  entry.id === activeTab ? { ...entry, code: newCode } : entry,
-                );
-                setProblemRecord((current) => ({
-                  ...(current || {}),
-                  solutionEntries: nextEntries,
-                }));
-                updateFileContent(activeFileId, activeTab, newCode);
-              }}
+        <PanelResizeHandle className="w-[2px] bg-white/[0.05] transition-colors group-hover:bg-blue-500/70" />
+
+        <Panel defaultSize={60} minSize={20} className="bg-[#0d0d0d]">
+          <div className="flex h-full flex-col">
+            <ProblemSolutionTabs
+              activeTab={activeTab}
+              solutions={solutionEntries}
+              onAdd={handleAddSolution}
+              onChange={setActiveTab}
+              onDelete={handleDeleteSolution}
+              onRename={handleRenameSolution}
+            />
+
+            <div className="min-h-0 flex-1 bg-[#1e1e1e]">
+              <CodeEditor
+                code={
+                  solutionEntries.find((entry) => entry.id === activeTab)?.code || ""
+                }
+                language="javascript"
+                onChange={(newCode) => {
+                  const nextEntries = solutionEntries.map((entry) =>
+                    entry.id === activeTab ? { ...entry, code: newCode } : entry,
+                  );
+                  setProblemRecord((current) => ({
+                    ...(current || {}),
+                    solutionEntries: nextEntries,
+                  }));
+                  updateFileContent(activeFileId, activeTab, newCode);
+                }}
+              />
+            </div>
+
+            <ProblemComplexityFields
+              timeValue={problemView?.analysis?.time}
+              spaceValue={problemView?.analysis?.space}
+              onTimeChange={handleTimeChange}
+              onSpaceChange={handleSpaceChange}
+              onPrev={handlePrevProblem}
+              hasPrev={Boolean(previousProblem)}
+              onNext={handleNextProblem}
+              hasNext={Boolean(nextProblem)}
             />
           </div>
-
-          <ProblemComplexityFields
-            timeValue={problemView?.analysis?.time}
-            spaceValue={problemView?.analysis?.space}
-            onTimeChange={handleTimeChange}
-            onSpaceChange={handleSpaceChange}
-            onNext={handleNextProblem}
-            hasNext={Boolean(nextProblem)}
-          />
-        </div>
-      </Panel>
-    </PanelGroup>
+        </Panel>
+      </PanelGroup>
+    </div>
   );
 };
 

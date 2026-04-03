@@ -119,6 +119,26 @@ function getTopicWiseRecommendations({ weakAreas = [], limit = 20 } = {}) {
   return grouped;
 }
 
+function getQuestionBankForTopic(topic) {
+  if (!topic) return null;
+  const byTopic = indexBank();
+  const bucket = byTopic.get(String(topic).trim());
+  if (!bucket) return null;
+
+  return {
+    topic: bucket.topic,
+    description: bucket.description,
+    problems: bucket.problems.map((problem) => ({
+      name: problem.name,
+      problemName: problem.name,
+      difficulty: problem.difficulty || "Medium",
+      leetcodeUrl: toLeetCodeUrl(problem),
+      comment: bucket.description,
+    })),
+  };
+}
+
 module.exports = {
+  getQuestionBankForTopic,
   getTopicWiseRecommendations,
 };

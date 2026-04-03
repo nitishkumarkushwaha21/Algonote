@@ -1,40 +1,108 @@
 import React, { useEffect, useRef, useState } from "react";
-import FolderThemeOne from "./FolderCard";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap');
 
   .sfc-card {
+    --sfc-border: rgba(125,211,252,0.14);
+    --sfc-card-bg:
+      radial-gradient(circle at top left, rgba(125,211,252,0.12), transparent 24%),
+      radial-gradient(circle at bottom right, rgba(56,189,248,0.08), transparent 32%),
+      linear-gradient(135deg, rgba(24,42,68,0.94), rgba(18,32,52,0.96) 52%, rgba(14,25,42,0.98));
+    --sfc-card-shadow: 0 18px 36px rgba(2,6,23,0.26);
+    --sfc-card-hover-shadow: 0 22px 42px rgba(2,6,23,0.32);
+    --sfc-card-hover-border: rgba(125,211,252,0.22);
+    --sfc-divider: rgba(255,255,255,0.08);
+    --sfc-title: rgba(240,249,255,0.94);
+    --sfc-menu-border: rgba(255,255,255,0.10);
+    --sfc-menu-bg: rgba(255,255,255,0.06);
+    --sfc-menu-hover-border: rgba(125,211,252,0.18);
+    --sfc-menu-hover-bg: rgba(255,255,255,0.10);
+    --sfc-menu-dot: rgba(224,242,254,0.8);
+    --sfc-meta: rgba(186,230,253,0.78);
+    --sfc-date: rgba(191,219,254,0.58);
+    --sfc-underline: rgba(255,255,255,0.28);
+    --sfc-icon-stroke: rgba(96,165,250,0.84);
+    --sfc-icon-fill-top: rgba(255,255,255,0.98);
+    --sfc-icon-fill-bottom: rgba(241,245,249,0.94);
+    --sfc-icon-glow: rgba(96,165,250,0.10);
     position: relative;
     border-radius: 16px;
-    border: 1px solid rgba(148,163,184,0.14);
-    background:
-      radial-gradient(circle at top right, rgba(59,130,246,0.08), transparent 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.028), rgba(255,255,255,0.012)),
-      #182230;
+    border: 1px solid var(--sfc-border);
+    background: var(--sfc-card-bg);
     box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.04),
-      0 18px 36px rgba(2,6,23,0.28);
+      inset 0 1px 0 rgba(255,255,255,0.07),
+      var(--sfc-card-shadow);
     cursor: pointer;
     transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
   }
 
+  .sfc-card.theme-sky {
+    --sfc-border: rgba(186,230,253,0.30);
+    --sfc-card-bg:
+      radial-gradient(circle at top left, rgba(255,255,255,0.34), transparent 24%),
+      radial-gradient(circle at bottom right, rgba(56,189,248,0.18), transparent 30%),
+      linear-gradient(135deg, rgba(191,232,255,0.96), rgba(151,215,250,0.94) 54%, rgba(119,193,240,0.92));
+    --sfc-card-shadow: 0 18px 36px rgba(34,94,140,0.18);
+    --sfc-card-hover-shadow: 0 22px 42px rgba(34,94,140,0.22);
+    --sfc-card-hover-border: rgba(59,130,246,0.34);
+    --sfc-divider: rgba(255,255,255,0.24);
+    --sfc-title: rgba(8,47,73,0.92);
+    --sfc-menu-border: rgba(255,255,255,0.26);
+    --sfc-menu-bg: rgba(255,255,255,0.18);
+    --sfc-menu-hover-border: rgba(255,255,255,0.38);
+    --sfc-menu-hover-bg: rgba(255,255,255,0.28);
+    --sfc-menu-dot: rgba(8,47,73,0.72);
+    --sfc-meta: rgba(8,47,73,0.74);
+    --sfc-date: rgba(12,74,110,0.62);
+    --sfc-underline: rgba(255,255,255,0.52);
+    --sfc-icon-stroke: rgba(59,130,246,0.82);
+    --sfc-icon-fill-top: rgba(255,255,255,0.98);
+    --sfc-icon-fill-bottom: rgba(241,245,249,0.96);
+    --sfc-icon-glow: rgba(96,165,250,0.14);
+  }
+
+  .sfc-card.theme-green {
+    --sfc-border: rgba(203,213,225,0.28);
+    --sfc-card-bg:
+      radial-gradient(circle at top left, rgba(255,255,255,0.46), transparent 24%),
+      radial-gradient(circle at bottom right, rgba(203,213,225,0.22), transparent 30%),
+      linear-gradient(135deg, rgba(249,250,251,0.98), rgba(233,236,241,0.96) 54%, rgba(214,219,228,0.94));
+    --sfc-card-shadow: 0 18px 36px rgba(71,85,105,0.16);
+    --sfc-card-hover-shadow: 0 22px 42px rgba(71,85,105,0.20);
+    --sfc-card-hover-border: rgba(100,116,139,0.34);
+    --sfc-divider: rgba(15,23,42,0.12);
+    --sfc-title: rgba(15,23,42,0.92);
+    --sfc-menu-border: rgba(148,163,184,0.28);
+    --sfc-menu-bg: rgba(255,255,255,0.46);
+    --sfc-menu-hover-border: rgba(100,116,139,0.34);
+    --sfc-menu-hover-bg: rgba(255,255,255,0.68);
+    --sfc-menu-dot: rgba(15,23,42,0.72);
+    --sfc-meta: rgba(30,41,59,0.76);
+    --sfc-date: rgba(51,65,85,0.62);
+    --sfc-underline: rgba(15,23,42,0.22);
+    --sfc-icon-stroke: rgba(71,85,105,0.82);
+    --sfc-icon-fill-top: rgba(255,255,255,0.99);
+    --sfc-icon-fill-bottom: rgba(241,245,249,0.96);
+    --sfc-icon-glow: rgba(148,163,184,0.14);
+  }
+
   .sfc-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(96,165,250,0.24);
+    border-color: var(--sfc-card-hover-border);
     box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.05),
-      0 22px 42px rgba(2,6,23,0.34);
+      inset 0 1px 0 rgba(255,255,255,0.09),
+      var(--sfc-card-hover-shadow);
   }
 
   .sfc-shell {
     position: relative;
     min-height: 138px;
-    padding: 15px 16px 13px;
+    padding: 16px 18px 13px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
   }
 
   .sfc-shell::after {
@@ -42,7 +110,7 @@ const css = `
     position: absolute;
     inset: auto 18px 14px 18px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    background: linear-gradient(90deg, transparent, var(--sfc-divider), transparent);
     pointer-events: none;
   }
 
@@ -50,56 +118,59 @@ const css = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
     position: relative;
     z-index: 1;
   }
 
   .sfc-folder {
     position: relative;
-    width: 76px;
-    height: 58px;
+    width: 70px;
+    height: 46px;
     flex-shrink: 0;
-    border-radius: 10px;
-    background:
-      linear-gradient(180deg, rgba(147,197,253,0.26) 0%, rgba(59,130,246,0.18) 100%),
-      rgba(30,64,175,0.18);
-    border: 1px solid rgba(96,165,250,0.26);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.16),
-      0 10px 24px rgba(30,64,175,0.16);
-    overflow: hidden;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
   }
 
   .sfc-folder::before {
     content: "";
     position: absolute;
-    top: 8px;
-    left: 9px;
-    width: 24px;
-    height: 9px;
-    border-radius: 8px 8px 0 0;
-    background: rgba(219,234,254,0.90);
+    top: 7px;
+    left: 12px;
+    width: 18px;
+    height: 6px;
+    border-radius: 4px 4px 0 0;
+    border: 2px solid var(--sfc-icon-stroke);
+    border-bottom: 0;
+    background: var(--sfc-icon-fill-top);
+    box-shadow:
+      0 0 4px var(--sfc-icon-glow),
+      inset 0 0 3px rgba(255,255,255,0.06);
   }
 
   .sfc-folder::after {
     content: "";
     position: absolute;
-    inset: 16px 7px 7px;
-    border-radius: 8px;
+    inset: 12px 6px 7px;
+    border-radius: 5px;
+    border: 2px solid var(--sfc-icon-stroke);
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.05)),
-      linear-gradient(180deg, rgba(59,130,246,0.54), rgba(37,99,235,0.76));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+      linear-gradient(180deg, var(--sfc-icon-fill-top), var(--sfc-icon-fill-bottom));
+    box-shadow:
+      0 0 5px var(--sfc-icon-glow),
+      inset 0 0 6px rgba(255,255,255,0.08);
   }
 
   .sfc-folder-glow {
     position: absolute;
-    inset: auto 10px 10px 10px;
-    height: 22px;
+    inset: auto 11px 7px 11px;
+    height: 10px;
     border-radius: 999px;
-    background: rgba(255,255,255,0.12);
-    filter: blur(12px);
+    background: var(--sfc-icon-glow);
+    filter: blur(7px);
     pointer-events: none;
     z-index: 2;
   }
@@ -111,25 +182,15 @@ const css = `
 
   .sfc-title {
     margin: 0;
-    color: rgba(248,250,252,0.98);
+    color: var(--sfc-title);
     font-family: 'JetBrains Mono', monospace;
     font-size: 18px;
     font-weight: 600;
-    line-height: 1.08;
-    letter-spacing: -0.03em;
+    line-height: 1.02;
+    letter-spacing: -0.045em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .sfc-count {
-    margin-top: 8px;
-    color: rgba(191,219,254,0.92);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-family: 'Inter', sans-serif;
   }
 
   .sfc-menu-wrap {
@@ -142,8 +203,8 @@ const css = `
     width: 30px;
     height: 24px;
     border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.10);
-    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--sfc-menu-border);
+    background: var(--sfc-menu-bg);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -154,15 +215,15 @@ const css = `
   }
 
   .sfc-menu-btn:hover {
-    background: rgba(255,255,255,0.08);
-    border-color: rgba(255,255,255,0.18);
+    background: var(--sfc-menu-hover-bg);
+    border-color: var(--sfc-menu-hover-border);
   }
 
   .sfc-dot {
     width: 3px;
     height: 3px;
     border-radius: 999px;
-    background: rgba(255,255,255,0.75);
+    background: var(--sfc-menu-dot);
   }
 
   .sfc-dropdown {
@@ -259,44 +320,48 @@ const css = `
     gap: 10px;
     position: relative;
     z-index: 1;
-  }
-
-  .sfc-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    border-radius: 999px;
-    border: 1px solid rgba(96,165,250,0.18);
-    background: rgba(59,130,246,0.10);
-    color: #bfdbfe;
-    padding: 6px 10px;
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-  }
-
-  .sfc-tag-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: #60a5fa;
-    box-shadow: 0 0 0 4px rgba(96,165,250,0.12);
+    margin-left: 0;
   }
 
   .sfc-meta {
-    color: rgba(191,219,254,0.76);
-    font-size: 11px;
+    color: var(--sfc-meta);
+    font-size: 10px;
     font-family: 'Inter', sans-serif;
     font-weight: 500;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    position: relative;
+    padding-bottom: 6px;
+  }
+
+  .sfc-meta::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--sfc-underline);
   }
 
   .sfc-date {
-    color: rgba(148,163,184,0.68);
-    font-size: 11px;
+    color: var(--sfc-date);
+    font-size: 10px;
     white-space: nowrap;
     font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+    position: relative;
+    padding-bottom: 6px;
+  }
+
+  .sfc-date::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--sfc-underline);
   }
 
   .sfc-confirm {
@@ -354,7 +419,7 @@ const formatDate = (dateValue) =>
     year: "numeric",
   });
 
-const FolderThemeTwo = ({ folder, onDelete, onOpen, onRename }) => {
+const FolderThemeTwo = ({ folder, onDelete, onOpen, onRename, theme = "default" }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -404,7 +469,7 @@ const FolderThemeTwo = ({ folder, onDelete, onOpen, onRename }) => {
     <>
       <style>{css}</style>
       <div
-        className="sfc-card"
+        className={`sfc-card${theme === "sky" ? " theme-sky" : ""}${theme === "green" ? " theme-green" : ""}`}
         onClick={() => {
           if (!isRenaming && !isConfirmingDelete) {
             onOpen?.(folder);
@@ -449,9 +514,6 @@ const FolderThemeTwo = ({ folder, onDelete, onOpen, onRename }) => {
 
             <div className="sfc-copy">
               <h3 className="sfc-title">/{folder.name}</h3>
-              <div className="sfc-count">
-                {folder.files} {folder.files === 1 ? "FILE" : "FILES"}
-              </div>
             </div>
 
             <div className="sfc-menu-wrap" ref={menuRef}>
@@ -547,6 +609,6 @@ const FolderThemeTwo = ({ folder, onDelete, onOpen, onRename }) => {
 
 const SlateFolderCard = FolderThemeTwo;
 
-export { FolderThemeOne, FolderThemeTwo };
+export { FolderThemeTwo };
 
 export default SlateFolderCard;

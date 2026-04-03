@@ -3,13 +3,15 @@ import {
   ChevronDown,
   ChevronRight,
   Edit2,
-  FileCode2,
-  FolderClosed,
+  FilePenLine,
+  FileText,
+  FolderTree,
   MoreHorizontal,
   Trash2,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useFileStore from "../../store/useFileStore";
+import { getFileVisualType } from "../../utils/problemSources";
 
 const SidebarTreeItem = ({ item, depth = 0 }) => {
   const navigate = useNavigate();
@@ -27,6 +29,8 @@ const SidebarTreeItem = ({ item, depth = 0 }) => {
   const [nextName, setNextName] = useState(item.name);
 
   const isExpanded = expandedFolders.includes(item.id);
+  const isFolder = item.type === "folder";
+  const fileVisualType = getFileVisualType(item);
   const isActive =
     (item.type === "file" && String(activeFileId) === String(item.id)) ||
     (item.type === "folder" && location.pathname === `/folder/${item.id}`);
@@ -75,12 +79,18 @@ const SidebarTreeItem = ({ item, depth = 0 }) => {
   return (
     <div className="relative">
       <div
-        className={`group relative flex cursor-pointer select-none items-center gap-2 rounded-2xl px-3 py-2 text-sm transition-colors ${
+        className={`group relative flex cursor-pointer select-none items-center gap-2 overflow-hidden border px-3 text-sm transition-all ${
+          isFolder ? "rounded-[11px]" : "rounded-[9px]"
+        } ${
           isActive
-            ? "bg-white/[0.08] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-            : "text-white/72 hover:bg-white/[0.04] hover:text-white"
+            ? "border-white/8 bg-white/[0.06] font-medium text-white shadow-[0_8px_18px_rgba(0,0,0,0.16)]"
+            : "border-transparent text-white/72 hover:border-white/6 hover:bg-white/[0.032] hover:text-white"
         }`}
-        style={{ paddingLeft: `${depth * 14 + 14}px` }}
+        style={{
+          paddingLeft: `${depth * 14 + 14}px`,
+          paddingTop: isFolder ? "0.48rem" : "0.22rem",
+          paddingBottom: isFolder ? "0.48rem" : "0.22rem",
+        }}
         onClick={handleSelect}
         onContextMenu={(event) => {
           event.preventDefault();
@@ -88,20 +98,52 @@ const SidebarTreeItem = ({ item, depth = 0 }) => {
           setShowContextMenu((prev) => !prev);
         }}
       >
-        <span className="shrink-0 text-white/34">
-          {item.type === "folder" &&
-            (isExpanded ? (
+        <span
+          className={`absolute bottom-1.5 left-1 top-1.5 w-[2px] rounded-full transition-opacity ${
+            isActive
+              ? item.type === "folder"
+                ? "bg-emerald-300/90 opacity-100"
+                : "bg-cyan-300/90 opacity-100"
+              : "opacity-0 group-hover:opacity-60"
+          }`}
+        />
+
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-white/28">
+          {isFolder ? (
+            isExpanded ? (
               <ChevronDown size={14} />
             ) : (
               <ChevronRight size={14} />
-            ))}
+            )
+          ) : null}
         </span>
 
         <span className="shrink-0">
-          {item.type === "folder" ? (
-            <FolderClosed size={17} className="text-blue-400" />
+          {isFolder ? (
+            <FolderTree
+              size={16}
+              className={isActive ? "text-emerald-300" : "text-emerald-400/80"}
+            />
+          ) : fileVisualType === "notes" ? (
+            <FileText
+              size={15}
+              className={isActive ? "text-sky-300" : "text-sky-400/85"}
+            />
+          ) : fileVisualType === "gfg" ? (
+            <FilePenLine
+              size={15}
+              className={isActive ? "text-emerald-300" : "text-emerald-400/85"}
+            />
+          ) : fileVisualType === "leetcode" ? (
+            <FilePenLine
+              size={15}
+              className={isActive ? "text-amber-300" : "text-amber-300/80"}
+            />
           ) : (
-            <FileCode2 size={17} className="text-orange-400" />
+            <FilePenLine
+              size={15}
+              className={isActive ? "text-cyan-300" : "text-[#d8e3f2]/72"}
+            />
           )}
         </span>
 
@@ -126,7 +168,9 @@ const SidebarTreeItem = ({ item, depth = 0 }) => {
             />
           </form>
         ) : (
-          <span className="min-w-0 flex-1 truncate">{item.name}</span>
+          <span className="min-w-0 flex-1 truncate tracking-[-0.01em]">
+            {item.name}
+          </span>
         )}
 
         {!isRenaming && (
@@ -135,16 +179,16 @@ const SidebarTreeItem = ({ item, depth = 0 }) => {
               event.stopPropagation();
               setShowContextMenu((prev) => !prev);
             }}
-            className="rounded-xl p-1.5 text-white/36 opacity-0 transition hover:bg-white/[0.06] hover:text-white/80 group-hover:opacity-100"
+            className="rounded-[9px] border border-white/8 bg-white/[0.035] p-1.5 text-white/48 opacity-70 transition hover:border-white/14 hover:bg-white/[0.08] hover:text-white group-hover:opacity-100"
             title="More"
           >
-            <MoreHorizontal size={12} />
+            <MoreHorizontal size={13} />
           </button>
         )}
       </div>
 
       {showContextMenu && (
-        <div className="absolute right-2 top-10 z-50 min-w-28 rounded-2xl border border-white/10 bg-[#0b0d12] p-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.46)]">
+        <div className="absolute right-2 top-11 z-50 min-w-28 rounded-2xl border border-white/10 bg-[#0b111b] p-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.46)]">
           <button
             onClick={(event) => {
               event.stopPropagation();

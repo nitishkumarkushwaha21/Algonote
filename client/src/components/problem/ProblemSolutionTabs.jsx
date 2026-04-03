@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { clsx } from "clsx";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
 const ProblemSolutionTabs = ({
   activeTab,
@@ -8,24 +8,22 @@ const ProblemSolutionTabs = ({
   onAdd,
   onChange,
   onDelete,
-  onMoveLeft,
-  onMoveRight,
   onRename,
 }) => {
   const [editingId, setEditingId] = useState(null);
   const [draftLabel, setDraftLabel] = useState("");
 
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-neutral-800 bg-neutral-950 px-3 py-2">
-      <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
+    <div className="flex items-center justify-between gap-3 border-b border-white/6 bg-[#111111] px-4 py-2">
+      <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto overflow-y-visible">
         {solutions.map((tab, index) => (
           <div
             key={tab.id}
             className={clsx(
-              "mb-[-1px] flex shrink-0 items-center gap-1 rounded-t-xl border px-3 py-2 text-sm transition-colors",
+              "flex shrink-0 items-center gap-1 rounded-lg border px-3 py-1.5 text-sm transition-colors",
               activeTab === tab.id
-                ? "border-neutral-800 border-b-neutral-900 bg-neutral-900 text-blue-300"
-                : "border-transparent bg-transparent text-gray-500 hover:bg-neutral-900/50 hover:text-gray-300",
+                ? "border-violet-400/36 bg-violet-500/[0.11] text-violet-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                : "border-transparent bg-transparent text-white/44 hover:bg-white/[0.04] hover:text-white/72",
             )}
           >
             <div
@@ -55,7 +53,7 @@ const ProblemSolutionTabs = ({
                       setEditingId(null);
                     }
                   }}
-                  className="w-28 rounded bg-transparent text-sm text-white outline-none"
+                  className="w-28 border-b border-white/20 bg-transparent text-sm text-white outline-none focus:border-blue-300/60"
                 />
               ) : (
                 tab.label
@@ -69,34 +67,16 @@ const ProblemSolutionTabs = ({
                   setEditingId(tab.id);
                   setDraftLabel(tab.label);
                 }}
-                className="rounded p-1 text-gray-500 transition hover:bg-white/5 hover:text-white"
+                className="rounded p-0.5 text-white/34 transition hover:bg-white/6 hover:text-white"
                 title="Rename solution"
               >
-                <Pencil size={11} />
-              </button>
-              <button
-                type="button"
-                onClick={() => onMoveLeft(index)}
-                disabled={index === 0}
-                className="rounded p-1 text-gray-500 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-                title="Move left"
-              >
-                <ChevronLeft size={12} />
-              </button>
-              <button
-                type="button"
-                onClick={() => onMoveRight(index)}
-                disabled={index === solutions.length - 1}
-                className="rounded p-1 text-gray-500 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-                title="Move right"
-              >
-                <ChevronRight size={12} />
+              <Pencil size={11} />
               </button>
               <button
                 type="button"
                 onClick={() => onDelete(tab.id)}
                 disabled={solutions.length === 1}
-                className="rounded p-1 text-gray-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-30"
+                className="rounded p-0.5 text-white/34 transition hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-30"
                 title="Delete solution"
               >
                 <Trash2 size={11} />
@@ -109,7 +89,7 @@ const ProblemSolutionTabs = ({
       <button
         type="button"
         onClick={onAdd}
-        className="flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+        className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/76 transition hover:border-white/18 hover:bg-white/[0.07] hover:text-white"
       >
         <Plus size={14} />
         Add Solution

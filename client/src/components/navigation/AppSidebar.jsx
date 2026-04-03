@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  BarChart3,
-  FolderPlus,
-  Home,
+  BookOpen,
+  ChartNoAxesColumn,
+  ChevronRight,
+  FilePenLine,
+  House,
   LayoutPanelLeft,
+  ScrollText,
   PanelLeftClose,
-  Plus,
-  Sparkles,
-  SquarePen,
+  Shapes,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useFileStore from "../../store/useFileStore";
@@ -29,23 +30,10 @@ const AppSidebar = () => {
     toggleFolder,
   } = useFileStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
-  const createMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (createMenuRef.current && !createMenuRef.current.contains(event.target)) {
-        setIsCreateMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     if (!isResizing) {
@@ -81,16 +69,23 @@ const AppSidebar = () => {
 
   const navItems = useMemo(
     () => [
-      { id: "home", icon: Home, label: "Home", path: "/" },
+      { id: "home", icon: House, label: "Home", path: "/" },
+      { id: "about", icon: BookOpen, label: "About", path: "/heropage" },
       {
         id: "playlist",
-        icon: Sparkles,
+        icon: Shapes,
         label: "Playlist",
         path: "/playlist",
       },
       {
+        id: "leetcode-list",
+        icon: ScrollText,
+        label: "Revision List",
+        path: "/leetcode-list",
+      },
+      {
         id: "profile",
-        icon: BarChart3,
+        icon: ChartNoAxesColumn,
         label: "Profile",
         path: "/profile-analysis",
       },
@@ -105,7 +100,6 @@ const AppSidebar = () => {
     const label = type === "file" ? "file" : "folder";
     const name = window.prompt(`Enter ${label} name:`);
     if (!name) {
-      setIsCreateMenuOpen(false);
       return;
     }
 
@@ -113,7 +107,6 @@ const AppSidebar = () => {
     if (!created) {
       window.alert(`Could not create ${label}. Check backend and try again.`);
     }
-    setIsCreateMenuOpen(false);
   };
 
   const isActivePath = (path) => {
@@ -143,71 +136,99 @@ const AppSidebar = () => {
 
   return (
     <aside
-      className="relative flex h-full shrink-0 border-r border-white/10 bg-[#0a1020] text-white"
+      className="relative flex h-full shrink-0 border-r border-white/8 bg-[#050b14] text-white"
       style={{ width: `${currentWidth}px` }}
     >
-      <div className="flex h-full min-w-0 flex-1 flex-col bg-[#0a1020]">
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_16%)]" />
+      <div className="relative flex h-full min-w-0 flex-1 flex-col bg-[#050b14]">
         <div
-          className={`flex items-center border-b border-white/10 ${
-            isCollapsed ? "h-16 justify-center" : "h-16 justify-between px-4"
+          className={`flex items-center border-b border-white/8 ${
+            isCollapsed ? "h-18 justify-center" : "h-18 justify-between px-4"
           }`}
         >
           {!isCollapsed && (
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/28">
-                Explorer
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.65)]" />
+                <div className="min-w-0">
+                  <h2 className="truncate text-[18px] font-semibold tracking-[-0.05em] text-white/96">
+                    <span className="text-emerald-200">Algo</span>
+                    <span className="text-white">Note</span>
+                  </h2>
+                </div>
               </div>
-              <h2 className="mt-1 text-[15px] font-semibold tracking-wide text-white/88">
-                Algo Note
-              </h2>
+              <div className="mt-2 h-px w-28 bg-gradient-to-r from-emerald-300/55 via-cyan-300/20 to-transparent" />
             </div>
           )}
 
-          <div className="flex items-center gap-2" ref={createMenuRef}>
-            {!isCollapsed && (
-              <button
-                type="button"
-                onClick={() => setIsCreateMenuOpen((value) => !value)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#131b2f] text-white/70 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-                title="Create new"
-              >
-                <Plus size={16} />
-              </button>
-            )}
-
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setIsCollapsed((value) => !value)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/70 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/8 bg-white/[0.03] text-white/70 transition hover:border-white/16 hover:bg-white/[0.06] hover:text-white"
               title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {isCollapsed ? <LayoutPanelLeft size={18} /> : <PanelLeftClose size={18} />}
             </button>
-
-            {!isCollapsed && isCreateMenuOpen && (
-              <div className="absolute right-4 top-14 z-50 min-w-40 rounded-2xl border border-white/10 bg-[#10182b] p-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.46)]">
-                <button
-                  type="button"
-                  onClick={() => createRootItem("folder")}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-white/80 transition hover:bg-white/[0.06] hover:text-white"
-                >
-                  <FolderPlus size={15} className="text-blue-400" />
-                  New Folder
-                </button>
-                <button
-                  type="button"
-                  onClick={() => createRootItem("file")}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-white/80 transition hover:bg-white/[0.06] hover:text-white"
-                >
-                  <SquarePen size={15} className="text-orange-400" />
-                  New File
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+        <div className="basis-[40%] px-3 py-3">
+          {isCollapsed ? (
+            <div className="space-y-2">
+              {navItems.map(({ id, icon: Icon, label, path }) => {
+                const isActive = isActivePath(path);
+
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => navigate(path)}
+                    className={`mx-auto flex h-11 w-11 items-center justify-center rounded-2xl border transition ${
+                      isActive
+                        ? "border-emerald-300/18 bg-white/[0.08] text-white shadow-[0_10px_25px_rgba(0,0,0,0.24)]"
+                        : "border-transparent bg-transparent text-white/45 hover:border-white/10 hover:bg-white/[0.05] hover:text-white/85"
+                    }`}
+                    title={label}
+                  >
+                    <Icon size={18} />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="px-1">
+              <div className="mb-3 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/24">
+                Navigate
+              </div>
+              <div className="space-y-1">
+                {navItems.map(({ id, icon: Icon, label, path }) => {
+                  const isActive = isActivePath(path);
+
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => navigate(path)}
+                      className={`flex w-full items-center gap-3 rounded-[12px] border px-3 py-2 transition ${
+                        isActive
+                          ? "border-white/8 bg-white/[0.07] text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
+                          : "border-transparent text-white/55 hover:border-white/7 hover:bg-white/[0.035] hover:text-white/90"
+                      }`}
+                      title={label}
+                    >
+                      <Icon size={18} />
+                      <span className="text-sm font-medium">{label}</span>
+                      {isActive && <ChevronRight size={13} className="ml-auto text-emerald-300" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-[1_1_60%] overflow-y-auto border-t border-white/6 px-3 pb-3 pt-3">
           {isCollapsed ? (
             <div className="space-y-2">
               {collapsedRootItems.map((item) => {
@@ -221,66 +242,42 @@ const AppSidebar = () => {
                     onClick={() => handleCollapsedItemClick(item)}
                     className={`mx-auto flex h-11 w-11 items-center justify-center rounded-2xl border text-sm font-semibold transition ${
                       isFolder
-                        ? "border-blue-500/20 bg-blue-500/10 text-blue-300 hover:border-blue-400/30 hover:bg-blue-500/14"
-                        : "border-orange-500/20 bg-orange-500/10 text-orange-300 hover:border-orange-400/30 hover:bg-orange-500/14"
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400/30 hover:bg-emerald-500/14"
+                        : "border-cyan-500/20 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400/30 hover:bg-cyan-500/14"
                     }`}
                     title={item.name}
                   >
-                    {isFolder ? initial : <SquarePen size={16} />}
+                    {isFolder ? initial : <FilePenLine size={16} />}
                   </button>
                 );
               })}
             </div>
           ) : isLoading ? (
-            <div className="px-2 py-3 text-sm text-white/45">Loading files...</div>
+            <div className="px-3 py-4 text-sm text-white/45">Loading files...</div>
           ) : error ? (
             <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-3 text-sm text-red-300">
               Failed to load files: {error}
             </div>
           ) : fileSystem.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 text-sm text-white/45">
-              No files yet. Use the plus button to create your first folder or file.
+            <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3 text-sm text-white/45">
+              No files yet. Create your first folder or file from Explorer.
             </div>
           ) : (
-            <div className="space-y-1.5">
-              {fileSystem.map((item) => (
-                <SidebarTreeItem key={item.id} item={item} />
-              ))}
+            <div className="px-1">
+              {!isCollapsed && (
+                <div className="mb-3 px-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/24">
+                    Explorer
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                {fileSystem.map((item) => (
+                  <SidebarTreeItem key={item.id} item={item} />
+                ))}
+              </div>
             </div>
           )}
-        </div>
-
-        <div className="border-t border-white/10 px-3 py-4">
-          <div className="space-y-2">
-            {navItems.map(({ id, icon: Icon, label, path }) => {
-              const isActive = isActivePath(path);
-
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => navigate(path)}
-                  className={`flex items-center rounded-2xl border transition ${
-                    isCollapsed
-                      ? `mx-auto h-11 w-11 justify-center ${
-                          isActive
-                            ? "border-white/15 bg-white/[0.08] text-white shadow-[0_10px_25px_rgba(0,0,0,0.24)]"
-                            : "border-transparent bg-transparent text-white/45 hover:border-white/10 hover:bg-white/[0.05] hover:text-white/85"
-                        }`
-                      : `w-full gap-3 px-3 py-3 ${
-                          isActive
-                            ? "border-white/15 bg-white/[0.08] text-white shadow-[0_10px_25px_rgba(0,0,0,0.24)]"
-                            : "border-transparent bg-transparent text-white/55 hover:border-white/10 hover:bg-white/[0.05] hover:text-white/90"
-                        }`
-                  }`}
-                  title={label}
-                >
-                  <Icon size={19} />
-                  {!isCollapsed && <span className="text-sm font-medium">{label}</span>}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {!isCollapsed && (

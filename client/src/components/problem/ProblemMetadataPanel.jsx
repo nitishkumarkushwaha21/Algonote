@@ -1,5 +1,9 @@
 import React from "react";
 import { Download, ExternalLink, Loader2 } from "lucide-react";
+import {
+  detectProblemSource,
+  getProblemSourceLabel,
+} from "../../utils/problemSources";
 
 const difficultyStyles = {
   Easy: "border-green-500/20 bg-green-500/10 text-green-400",
@@ -15,19 +19,21 @@ const ProblemMetadataPanel = ({
   onLinkBlur,
   onImportClick,
 }) => {
+  const source = detectProblemSource(localLink) || activeFile.source || null;
+  const sourceLabel = getProblemSourceLabel(source);
   const canImport =
     localLink &&
-    localLink.includes("leetcode.com/problems/") &&
+    Boolean(detectProblemSource(localLink)) &&
     !activeFile.description &&
     !isImporting;
 
   return (
-    <div className="h-full overflow-y-auto bg-[#0f141d] p-6">
+    <div className="h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_28%),#0e131b] p-6">
       <style>{`
         .problem-statement {
-          color: rgb(209 213 219);
-          font-size: 0.95rem;
-          line-height: 1.8;
+          color: rgb(214 220 228);
+          font-size: 0.93rem;
+          line-height: 1.78;
         }
 
         .problem-statement > *:first-child {
@@ -66,10 +72,10 @@ const ProblemMetadataPanel = ({
           white-space: pre-wrap;
           word-break: break-word;
           overflow-wrap: anywhere;
-          border-radius: 16px;
+          border-radius: 18px;
           border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.04);
-          padding: 14px 16px;
+          background: rgba(255,255,255,0.035);
+          padding: 15px 17px;
           color: #e5e7eb;
           font-size: 0.84rem;
           line-height: 1.65;
@@ -81,7 +87,7 @@ const ProblemMetadataPanel = ({
           word-break: break-word;
           overflow-wrap: anywhere;
           border-radius: 8px;
-          background: rgba(255,255,255,0.06);
+          background: rgba(255,255,255,0.055);
           padding: 0.14rem 0.38rem;
           color: #f8fafc;
           font-size: 0.84rem;
@@ -104,6 +110,20 @@ const ProblemMetadataPanel = ({
           margin: 1rem 0;
         }
 
+        .problem-statement img {
+          display: block;
+          max-width: 100%;
+          height: auto;
+          margin: 1rem auto;
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.03);
+        }
+
+        .problem-statement figure {
+          margin: 1rem 0;
+        }
+
         .problem-statement td,
         .problem-statement th {
           border: 1px solid rgba(255,255,255,0.08);
@@ -117,13 +137,13 @@ const ProblemMetadataPanel = ({
         }
       `}</style>
 
-      <div className="mb-6 rounded-3xl border border-white/8 bg-white/[0.03] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
-        <h1 className="mb-2 text-3xl font-bold text-white">
-          {activeFile.title || activeFile.name}
-        </h1>
-
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-2">
+      <div className="mb-6 rounded-[28px] border border-white/8 bg-white/[0.035] p-5 shadow-[0_20px_44px_rgba(0,0,0,0.18)]">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="truncate text-[2rem] font-semibold tracking-[-0.03em] text-white">
+              {activeFile.title || activeFile.name}
+            </h1>
+            <div className="mt-3 flex flex-wrap gap-2">
             {activeFile.difficulty && (
               <span
                 className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
@@ -142,17 +162,33 @@ const ProblemMetadataPanel = ({
                 {tag.name}
               </span>
             ))}
+            </div>
           </div>
 
+          {localLink && source && (
+            <a
+              href={localLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-orange-500/18 bg-orange-500/12 px-3 py-2 text-xs font-medium text-orange-300 transition-colors hover:bg-orange-500/20"
+              title={`Open on ${sourceLabel}`}
+            >
+              <ExternalLink size={11} />
+              {sourceLabel}
+            </a>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <input
               key={`link-${activeFile.id}`}
               type="text"
-              placeholder="Paste LeetCode Link here..."
-              className={`flex-1 rounded border px-3 py-1 text-xs outline-none transition-colors ${
+              placeholder="Paste LeetCode or GFG link here..."
+              className={`flex-1 rounded-xl border px-3 py-2 text-xs outline-none transition-colors ${
                 isImporting
-                  ? "animate-pulse border-yellow-500 text-yellow-400"
-                  : "border-neutral-800 bg-neutral-950 text-gray-400 focus:border-blue-500 focus:text-white"
+                  ? "animate-pulse border-yellow-500/45 bg-yellow-500/5 text-yellow-300"
+                  : "border-white/10 bg-[#0b1017] text-white/62 focus:border-blue-400/38 focus:text-white"
               }`}
               value={localLink}
               disabled={isImporting}
@@ -165,27 +201,14 @@ const ProblemMetadataPanel = ({
               onBlur={onLinkBlur}
             />
 
-            {localLink && localLink.includes("leetcode.com") && (
-              <a
-                href={localLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded border border-orange-500/20 bg-orange-500/15 px-3 py-1 text-xs font-medium text-orange-400 transition-colors hover:bg-orange-500/25"
-                title="Open on LeetCode"
-              >
-                <ExternalLink size={11} />
-                LeetCode
-              </a>
-            )}
-
             <button
               type="button"
               onClick={onImportClick}
               disabled={!canImport}
-              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded border px-3 py-1 text-xs font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
                 canImport
-                  ? "border-blue-500/25 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25"
-                  : "cursor-not-allowed border-neutral-800 bg-neutral-900 text-gray-500"
+                  ? "border-blue-500/22 bg-blue-500/12 text-blue-200 hover:bg-blue-500/20"
+                  : "cursor-not-allowed border-white/8 bg-white/[0.03] text-white/32"
               }`}
               title="Import and save question"
             >
@@ -196,12 +219,12 @@ const ProblemMetadataPanel = ({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
+      <div className="rounded-[28px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
         {isImporting ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="mr-2 animate-spin" size={20} />
             <span className="text-yellow-400">
-              Importing LeetCode problem...
+              Importing {sourceLabel} problem...
             </span>
           </div>
         ) : activeFile.description ? (
@@ -210,9 +233,10 @@ const ProblemMetadataPanel = ({
             dangerouslySetInnerHTML={{ __html: activeFile.description }}
           />
         ) : (
-          <div className="italic text-gray-500">
-            No description available yet. Paste a LeetCode link above and use
-            Import Question to save the statement for future fast opens.
+          <div className="italic text-white/42">
+            No description available yet. Paste a LeetCode or GFG link above
+            and use Import Question to save the statement for future fast
+            opens.
           </div>
         )}
       </div>

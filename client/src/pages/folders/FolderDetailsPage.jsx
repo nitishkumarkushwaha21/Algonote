@@ -1,31 +1,17 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { NotebookPen } from "lucide-react";
 import FolderHeader from "../../components/folders/FolderHeader";
 import FolderItemsTable from "../../components/folders/FolderItemsTable";
+import { FolderDetailsSkeleton } from "../../components/skeletons/ContentSkeletons";
 import useFileStore from "../../store/useFileStore";
+import { extractProblemNameFromLink } from "../../utils/problemSources";
 import { findTreeNode } from "../../utils/fileTree";
-
-const extractProblemNameFromLink = (link) => {
-  if (!link) {
-    return "";
-  }
-
-  const match = link.match(/leetcode\.com\/problems\/([^/]+)\/description/i);
-  if (!match?.[1]) {
-    return "";
-  }
-
-  return match[1]
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-};
 
 const FolderDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addItem, deleteItem, fileSystem } = useFileStore();
+  const { addItem, deleteItem, fileSystem, isLoading, hasLoadedFileSystem } = useFileStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [folderInput, setFolderInput] = useState("");
@@ -34,6 +20,10 @@ const FolderDetailsPage = () => {
   const [renameValue, setRenameValue] = useState("");
 
   const currentFolder = findTreeNode(fileSystem, id);
+
+  if (isLoading && !hasLoadedFileSystem) {
+    return <FolderDetailsSkeleton />;
+  }
 
   if (!currentFolder) {
     return <div className="p-8 text-white">Folder not found</div>;
@@ -87,7 +77,7 @@ const FolderDetailsPage = () => {
     const problemName = extractProblemNameFromLink(trimmedLink);
 
     if (!trimmedLink || !problemName) {
-      window.alert("Paste a valid LeetCode problem link.");
+      window.alert("Paste a valid LeetCode or GFG problem link.");
       return;
     }
 
@@ -100,6 +90,30 @@ const FolderDetailsPage = () => {
       }
     } catch (error) {
       console.error("Failed to create problem", error);
+    }
+  };
+
+  const handleCreateNotes = async () => {
+    let baseName = "Notes.txt";
+    const siblingNames = new Set(
+      (currentFolder.children || []).map((child) => String(child.name || "").toLowerCase()),
+    );
+
+    if (siblingNames.has(baseName.toLowerCase())) {
+      let index = 2;
+      while (siblingNames.has(`Notes ${index}.txt`.toLowerCase())) {
+        index += 1;
+      }
+      baseName = `Notes ${index}.txt`;
+    }
+
+    try {
+      const created = await addItem(currentFolder.id, baseName, "file", "");
+      if (created?.id) {
+        navigate(`/problem/${created.id}`);
+      }
+    } catch (error) {
+      console.error("Failed to create notes file", error);
     }
   };
 
@@ -204,6 +218,16 @@ const FolderDetailsPage = () => {
           }}
         />
       </div>
+
+      <button
+        type="button"
+        onClick={handleCreateNotes}
+        className="absolute bottom-6 right-6 inline-flex items-center gap-2 rounded-2xl border border-white/14 bg-white/[0.08] px-4 py-2.5 text-sm font-medium text-white/90 shadow-[0_14px_28px_rgba(0,0,0,0.28)] backdrop-blur transition hover:bg-white/[0.12]"
+        title="Create notes file"
+      >
+        <NotebookPen size={16} />
+        Notes
+      </button>
     </div>
   );
 };

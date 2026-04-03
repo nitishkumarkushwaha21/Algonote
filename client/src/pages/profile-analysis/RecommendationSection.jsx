@@ -1,11 +1,90 @@
 import React, { useState } from "react";
 import {
+  ChevronDown,
+  ChevronUp,
   Download,
   ExternalLink,
   FolderPlus,
   Loader2,
   Sparkles,
 } from "lucide-react";
+import profileAnalysisApi from "../../services/profileAnalysisApi";
+
+const getDifficultyColor = (difficulty) => {
+  switch ((difficulty || "").toLowerCase()) {
+    case "easy":
+      return "border-emerald-400/15 bg-emerald-500/10 text-emerald-300";
+    case "medium":
+      return "border-amber-400/15 bg-amber-500/10 text-amber-300";
+    case "hard":
+      return "border-rose-400/15 bg-rose-500/10 text-rose-300";
+    default:
+      return "border-white/10 bg-white/[0.04] text-white/65";
+  }
+};
+
+const TopicQuestionRow = ({ index, problem, onAdd, addState }) => {
+  const practiceUrl = problem.leetcodeUrl || problem.url;
+
+  return (
+    <div className="flex items-center gap-3 border-b border-white/8 px-3 py-2.5 transition-colors last:border-b-0 hover:bg-white/[0.025]">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[11px] font-semibold text-white/60">
+        {index + 1}
+      </div>
+
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-white/92">
+        {problem.problemName || problem.name}
+      </span>
+
+      <div className="flex w-24 shrink-0 justify-center">
+        <span
+          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${getDifficultyColor(
+            problem.difficulty,
+          )}`}
+        >
+          {problem.difficulty || "Unknown"}
+        </span>
+      </div>
+
+      {practiceUrl ? (
+        <a
+          href={practiceUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs font-medium text-white/78 transition-colors hover:bg-white/[0.08] hover:text-white"
+        >
+          Open
+          <ExternalLink size={12} />
+        </a>
+      ) : null}
+
+      <button
+        onClick={onAdd}
+        disabled={addState === "adding" || addState === "added"}
+        className={`shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-medium transition ${
+          addState === "added"
+            ? "bg-emerald-500 text-white"
+            : addState === "error"
+              ? "bg-red-500 text-white"
+              : "border border-white/10 bg-white/[0.04] text-white/78 hover:bg-white/[0.08] hover:text-white"
+        }`}
+      >
+        {addState === "adding" ? (
+          <span className="flex items-center gap-1.5">
+            <Loader2 size={12} className="animate-spin" />
+            Adding
+          </span>
+        ) : addState === "added" ? (
+          "Saved"
+        ) : addState === "error" ? (
+          "Failed"
+        ) : (
+          "Add"
+        )}
+      </button>
+    </div>
+  );
+};
 
 const RecommendationSection = ({
   recommendations,
@@ -17,59 +96,69 @@ const RecommendationSection = ({
   importResult,
 }) => {
   const [addingState, setAddingState] = useState({});
+  const [expandedTopics, setExpandedTopics] = useState({});
+  const [topicQuestionBank, setTopicQuestionBank] = useState({});
+  const [loadingTopics, setLoadingTopics] = useState({});
 
   if (!recommendations || Object.keys(recommendations).length === 0) {
     return null;
   }
 
   const handleAdd = async (problem, topic) => {
-    const key = `${topic}-${problem.name}`;
+    const key = `${topic}-${problem.problemName || problem.name}`;
     setAddingState((prev) => ({ ...prev, [key]: "adding" }));
 
     try {
       await onAddToRevision(problem, topic);
       setAddingState((prev) => ({ ...prev, [key]: "added" }));
-      setTimeout(
-        () => setAddingState((prev) => ({ ...prev, [key]: null })),
-        2500,
-      );
+      setTimeout(() => {
+        setAddingState((prev) => ({ ...prev, [key]: null }));
+      }, 2500);
     } catch {
       setAddingState((prev) => ({ ...prev, [key]: "error" }));
-      setTimeout(
-        () => setAddingState((prev) => ({ ...prev, [key]: null })),
-        3000,
-      );
+      setTimeout(() => {
+        setAddingState((prev) => ({ ...prev, [key]: null }));
+      }, 3000);
     }
   };
 
-  const getDifficultyColor = (difficulty) => {
-    switch ((difficulty || "").toLowerCase()) {
-      case "easy":
-        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-      case "medium":
-        return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
-      case "hard":
-        return "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300";
-      default:
-        return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+  const handleToggleTopic = async (topic) => {
+    if (expandedTopics[topic]) {
+      setExpandedTopics((prev) => ({ ...prev, [topic]: false }));
+      return;
     }
+
+    if (!topicQuestionBank[topic]) {
+      setLoadingTopics((prev) => ({ ...prev, [topic]: true }));
+      try {
+        const { data } = await profileAnalysisApi.getTopicQuestions(topic);
+        setTopicQuestionBank((prev) => ({
+          ...prev,
+          [topic]: data.data?.problems || [],
+        }));
+      } catch (_error) {
+        setTopicQuestionBank((prev) => ({ ...prev, [topic]: [] }));
+      } finally {
+        setLoadingTopics((prev) => ({ ...prev, [topic]: false }));
+      }
+    }
+
+    setExpandedTopics((prev) => ({ ...prev, [topic]: true }));
   };
 
   return (
-    <div className="mb-6 overflow-hidden rounded-[30px] border border-slate-200/70 bg-white/92 p-6 shadow-[0_30px_75px_-52px_rgba(15,23,42,0.95)] dark:border-slate-700 dark:bg-slate-900/88">
+    <div className="mb-6 rounded-[24px] border border-white/10 bg-[#151c25] p-5 shadow-[0_10px_28px_rgba(0,0,0,0.1)]">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="shrink-0 rounded-2xl bg-amber-400/15 p-3 text-amber-700 ring-1 ring-inset ring-amber-400/20 dark:text-amber-300">
-            <Sparkles size={24} />
+          <div className="shrink-0 rounded-2xl border border-slate-300/16 bg-slate-300/10 p-3 text-slate-200">
+            <Sparkles size={20} />
           </div>
           <div>
-            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+            <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">
               Generated Questions
             </h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-              <b>Add to Revision</b> saves to your list.{" "}
-              <b>Import All to Explorer</b> creates the full Weak Areas folder
-              in one shot.
+            <p className="mt-1 text-sm leading-6 text-[#b7c2cf]">
+              Expand a topic to see the full curated sheet, or save questions directly to revision.
             </p>
           </div>
         </div>
@@ -78,7 +167,7 @@ const RecommendationSection = ({
           <button
             onClick={onImportToExplorer}
             disabled={isImporting}
-            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white/82 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isImporting ? (
               <Loader2 size={14} className="animate-spin" />
@@ -91,166 +180,111 @@ const RecommendationSection = ({
           <button
             onClick={onExportSheet}
             disabled={!hasRevisionRows}
-            className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition-colors ${
+            className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition ${
               hasRevisionRows
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-300 dark:hover:bg-emerald-950/35"
-                : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-500"
+                ? "border-slate-300/16 bg-slate-300/10 text-slate-200 hover:bg-slate-300/14"
+                : "cursor-not-allowed border-white/8 bg-white/[0.03] text-white/34"
             }`}
           >
             <Download size={14} />
-            Export Sheet (CSV)
+            Export Sheet
           </button>
         </div>
       </div>
 
       {importResult && (
         <div
-          className={`mb-4 flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium ${
+          className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-medium ${
             importResult.success
-              ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300"
-              : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
+              ? "border-emerald-400/16 bg-emerald-500/10 text-emerald-200"
+              : "border-red-400/16 bg-red-500/10 text-red-200"
           }`}
         >
-          <span>{importResult.success ? "✓" : "x"}</span>
-          <span>{importResult.message}</span>
-          {importResult.success && (
-            <span className="text-slate-500 dark:text-slate-400">
-              check the File Explorer sidebar.
-            </span>
-          )}
+          {importResult.message}
         </div>
       )}
 
-      <div className="space-y-6">
-        {Object.entries(recommendations).map(([topic, problems]) => (
-          <div
-            key={topic}
-            className="overflow-hidden rounded-[26px] border border-slate-200/80 bg-slate-50/70 shadow-sm dark:border-slate-800 dark:bg-slate-950/40"
-          >
-            <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.9),rgba(241,245,249,0.95))] px-5 py-4 dark:border-slate-800 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.88))]">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Focus:{" "}
-                <span className="text-sky-600 dark:text-sky-300">{topic}</span>
-              </h3>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Recommended practice set for this weak area.
-              </p>
-            </div>
+      <div className="space-y-5">
+        {Object.entries(recommendations).map(([topic, problems]) => {
+          const previewProblems = problems.slice(0, 3);
+          const fullTopicQuestions = topicQuestionBank[topic] || [];
+          const isExpanded = Boolean(expandedTopics[topic]);
+          const isLoadingTopic = Boolean(loadingTopics[topic]);
 
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-slate-200/80 dark:border-slate-800">
-                    <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Question
-                    </th>
-                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Difficulty
-                    </th>
-                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Note
-                    </th>
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {problems.map((prob, idx) => {
-                    const addKey = `${topic}-${prob.name}`;
-                    const state = addingState[addKey];
-                    const practiceUrl = prob.leetcodeUrl || prob.url;
+          return (
+            <div
+              key={topic}
+              className="overflow-hidden rounded-[20px] border border-white/10 bg-[#1b232d]"
+            >
+              <div className="border-b border-white/10 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-white">
+                      Focus: <span className="text-slate-200">{topic}</span>
+                    </h3>
+                    <p className="mt-1 text-sm text-white/46">
+                      {problems[0]?.comment || "Recommended practice set for this weak area."}
+                    </p>
+                  </div>
 
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTopic(topic)}
+                    className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+                  >
+                    {isExpanded ? "Less ques" : "More ques"}
+                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {!isExpanded && (
+                <div className="px-3 py-2">
+                  {previewProblems.map((prob, idx) => {
+                    const key = `${topic}-${prob.problemName || prob.name}`;
                     return (
-                      <tr
-                        key={idx}
-                        className="border-b border-slate-200/70 transition-colors hover:bg-slate-100/70 dark:border-slate-800 dark:hover:bg-slate-900/70"
-                      >
-                        <td className="px-5 py-3 text-sm text-slate-700 dark:text-slate-200">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-300/80 bg-slate-100 text-sm font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                              {idx + 1}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                                {prob.name}
-                              </div>
-                              {practiceUrl && (
-                                <a
-                                  href={practiceUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  title="Practice on LeetCode"
-                                  className="mt-1 inline-flex items-center gap-1 text-xs text-slate-400 transition-colors hover:text-sky-500 dark:hover:text-sky-300"
-                                >
-                                  Open
-                                  <ExternalLink size={12} />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap ${getDifficultyColor(
-                              prob.difficulty,
-                            )}`}
-                          >
-                            {prob.difficulty}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
-                          <span className="block max-w-[320px] truncate">
-                            {prob.comment || "Recommended for this topic"}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <div className="flex items-center justify-end gap-2">
-                            {practiceUrl && (
-                              <a
-                                href={practiceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                title="Practice on LeetCode"
-                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
-                              >
-                                <ExternalLink size={14} />
-                              </a>
-                            )}
-                            <button
-                              onClick={() => handleAdd(prob, topic)}
-                              disabled={state === "adding" || state === "added"}
-                              className={`flex min-w-[138px] items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
-                                state === "added"
-                                  ? "bg-green-500 text-white"
-                                  : state === "error"
-                                    ? "bg-red-500 text-white"
-                                    : "border border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
-                              }`}
-                            >
-                              {state === "adding" ? (
-                                <>
-                                  <div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                                  Adding...
-                                </>
-                              ) : state === "added" ? (
-                                "Saved"
-                              ) : state === "error" ? (
-                                "Failed"
-                              ) : (
-                                "+ Add to Revision"
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                      <TopicQuestionRow
+                        key={`${key}-preview`}
+                        index={idx}
+                        problem={prob}
+                        addState={addingState[key]}
+                        onAdd={() => handleAdd(prob, topic)}
+                      />
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+              )}
+
+              {isExpanded && (
+                <div className="border-t border-white/10 bg-[#18212b] px-3 py-2">
+                  {isLoadingTopic ? (
+                    <div className="flex items-center justify-center gap-2 py-6 text-sm text-white/58">
+                      <Loader2 size={16} className="animate-spin" />
+                      Loading topic sheet...
+                    </div>
+                  ) : fullTopicQuestions.length === 0 ? (
+                    <div className="py-6 text-center text-sm text-white/46">
+                      No extra questions found for this topic.
+                    </div>
+                  ) : (
+                    fullTopicQuestions.map((prob, idx) => {
+                      const key = `${topic}-${prob.problemName || prob.name}`;
+                      return (
+                        <TopicQuestionRow
+                          key={`${key}-full`}
+                          index={idx}
+                          problem={prob}
+                          addState={addingState[key]}
+                          onAdd={() => handleAdd(prob, topic)}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
