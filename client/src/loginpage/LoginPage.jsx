@@ -26,6 +26,8 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const clerk = useClerk();
   const { signIn } = useSignIn();
+  const authOrigin =
+    typeof window !== "undefined" ? window.location.origin : "";
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -112,14 +114,16 @@ const LoginPage = () => {
         );
       }
 
-      const redirectUrl = "/sign-in/sso-callback";
-      const actionCompleteRedirectUrl = "/";
+      const redirectUrl = authOrigin
+        ? `${authOrigin}/sign-in/sso-callback`
+        : "/sign-in/sso-callback";
+      const actionCompleteRedirectUrl = authOrigin ? `${authOrigin}/` : "/";
 
       if (typeof signInResource.authenticateWithRedirect === "function") {
         await signInResource.authenticateWithRedirect({
           strategy: "oauth_google",
           redirectUrl,
-          actionCompleteRedirectUrl,
+          redirectUrlComplete: actionCompleteRedirectUrl,
           oidcPrompt: "select_account",
         });
         return;

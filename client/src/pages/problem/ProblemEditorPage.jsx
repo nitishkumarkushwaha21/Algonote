@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Group as PanelGroup,
@@ -129,6 +129,14 @@ const ProblemEditorPage = () => {
     currentProblemIndex >= 0 ? siblingProblems[currentProblemIndex + 1] : null;
   const previousProblem =
     currentProblemIndex > 0 ? siblingProblems[currentProblemIndex - 1] : null;
+  const siblingProblemIds = useMemo(
+    () => siblingProblems.map((item) => item.id),
+    [siblingProblems],
+  );
+  const siblingProblemIdsKey = useMemo(
+    () => siblingProblemIds.map((value) => String(value)).join(","),
+    [siblingProblemIds],
+  );
 
   useEffect(() => {
     if (activeFile && activeFile.link !== localLink && !isImporting) {
@@ -195,16 +203,12 @@ const ProblemEditorPage = () => {
   }, [id]);
 
   useEffect(() => {
-    if (!id || siblingProblems.length === 0) {
+    if (!id || siblingProblemIds.length === 0) {
       return;
     }
 
-    void prefetchAround(
-      id,
-      siblingProblems.map((item) => item.id),
-      3,
-    );
-  }, [id, prefetchAround, siblingProblems]);
+    void prefetchAround(id, siblingProblemIds, 3);
+  }, [id, prefetchAround, siblingProblemIdsKey]);
 
   useEffect(() => {
     if (

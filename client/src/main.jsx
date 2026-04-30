@@ -6,6 +6,11 @@ import "./index.css";
 import App from "./App.jsx";
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const authOrigin =
+  typeof window !== "undefined" ? window.location.origin : "";
+const authHomeUrl = authOrigin ? `${authOrigin}/` : "/";
+const authSignInUrl = authOrigin ? `${authOrigin}/sign-in` : "/sign-in";
+const authSignUpUrl = authOrigin ? `${authOrigin}/sign-up` : "/sign-up";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -14,11 +19,11 @@ createRoot(document.getElementById("root")).render(
         publishableKey={clerkPublishableKey}
         signInUrl="/sign-in"
         signUpUrl="/sign-up"
-        signInForceRedirectUrl="/"
-        signUpForceRedirectUrl="/"
-        signInFallbackRedirectUrl="/"
-        signUpFallbackRedirectUrl="/"
-        afterSignOutUrl="/sign-in"
+        signInForceRedirectUrl={authHomeUrl}
+        signUpForceRedirectUrl={authHomeUrl}
+        signInFallbackRedirectUrl={authHomeUrl}
+        signUpFallbackRedirectUrl={authHomeUrl}
+        afterSignOutUrl={authSignInUrl}
       >
         <BrowserRouter>
           <App />

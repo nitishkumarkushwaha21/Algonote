@@ -69,7 +69,7 @@ const ProblemComplexityFields = ({
             disabled={!hasPrev || isNavigating}
             className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
               hasPrev && !isNavigating
-                ? "border-white/12 bg-white/[0.05] text-white/78 hover:bg-white/[0.08]"
+                ? "border-yellow-300/55 bg-yellow-300/28 text-yellow-50 hover:bg-yellow-300/40"
                 : "cursor-not-allowed border-white/8 bg-white/[0.03] text-white/28"
             }`}
           >

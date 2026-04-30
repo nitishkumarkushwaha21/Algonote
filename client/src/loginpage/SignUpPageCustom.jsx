@@ -16,6 +16,8 @@ const SignUpPageCustom = () => {
   const location = useLocation();
   const clerk = useClerk();
   const { signUp } = useSignUp();
+  const authOrigin =
+    typeof window !== "undefined" ? window.location.origin : "";
   const prefilledEmail = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return params.get("email") || "";
@@ -98,14 +100,16 @@ const SignUpPageCustom = () => {
         );
       }
 
-      const redirectUrl = "/sign-in/sso-callback";
-      const actionCompleteRedirectUrl = "/";
+      const redirectUrl = authOrigin
+        ? `${authOrigin}/sign-in/sso-callback`
+        : "/sign-in/sso-callback";
+      const actionCompleteRedirectUrl = authOrigin ? `${authOrigin}/` : "/";
 
       if (typeof signUpResource.authenticateWithRedirect === "function") {
         await signUpResource.authenticateWithRedirect({
           strategy: "oauth_google",
           redirectUrl,
-          actionCompleteRedirectUrl,
+          redirectUrlComplete: actionCompleteRedirectUrl,
           oidcPrompt: "select_account",
         });
         return;

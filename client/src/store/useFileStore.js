@@ -198,21 +198,26 @@ const useFileStore = create((set, get) => ({
     }
   },
 
-  getProblemWithCache: async (fileId, { forceRefresh = false } = {}) => {
+  getProblemWithCache: async (
+    fileId,
+    { forceRefresh = false, syncTreeOnCacheHit = true } = {},
+  ) => {
     const key = normalizeFileId(fileId);
     if (!forceRefresh) {
       const cached = getCachedProblem(fileId);
       if (cached) {
-        set((state) => ({
-          fileSystem: updateTreeNode(state.fileSystem, fileId, (item) => ({
-            ...item,
-            ...cached,
-            id: item.id,
-            name: item.name,
-            type: item.type,
-            parentId: item.parentId,
-          })),
-        }));
+        if (syncTreeOnCacheHit) {
+          set((state) => ({
+            fileSystem: updateTreeNode(state.fileSystem, fileId, (item) => ({
+              ...item,
+              ...cached,
+              id: item.id,
+              name: item.name,
+              type: item.type,
+              parentId: item.parentId,
+            })),
+          }));
+        }
         return cached;
       }
     }
@@ -262,7 +267,7 @@ const useFileStore = create((set, get) => ({
     }
 
     try {
-      await get().getProblemWithCache(fileId);
+      await get().getProblemWithCache(fileId, { syncTreeOnCacheHit: false });
     } catch (error) {
       console.error(`Failed to prefetch problem ${fileId}`, error);
     }
