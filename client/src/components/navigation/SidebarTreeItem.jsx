@@ -148,7 +148,7 @@ const SidebarTreeItem = ({ item, depth = 0 }) => {
         </span>
 
         {isRenaming ? (
-          <form onSubmit={handleRenameSubmit} className="flex-1">
+          <form onSubmit={handleRenameSubmit} className="min-w-0 flex-1">
             <input
               type="text"
               value={nextName}
@@ -163,12 +163,12 @@ const SidebarTreeItem = ({ item, depth = 0 }) => {
                   setIsRenaming(false);
                 }
               }}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-2 py-1 text-sm text-white outline-none"
+              className="w-full min-w-0 rounded-xl border border-sky-200/30 bg-[#070f1b] px-2 py-1 text-xs text-sky-50 outline-none transition focus:border-sky-300/60 focus:shadow-[0_0_0_1px_rgba(125,211,252,0.24)]"
               autoFocus
             />
           </form>
         ) : (
-          <span className="min-w-0 flex-1 truncate tracking-[-0.01em]">
+          <span className="min-w-0 flex-1 text-[12px] leading-4 tracking-[-0.01em] [overflow-wrap:anywhere] [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]">
             {item.name}
           </span>
         )}

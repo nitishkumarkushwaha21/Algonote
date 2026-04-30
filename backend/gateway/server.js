@@ -1,10 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const { clerkMiddleware, requireAuth, getAuth } = require("@clerk/express");
-require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
-require("dotenv").config();
+require("./config/env");
 
 const app = express();
 const PORT = process.env.PORT || 5001;

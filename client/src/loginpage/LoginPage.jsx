@@ -11,11 +11,21 @@ const resolveVerificationRedirect = (verification) => {
   return url ? url.toString() : "";
 };
 
+const shouldRedirectToSignUp = (error) => {
+  const code = error?.errors?.[0]?.code;
+  const message = (error?.errors?.[0]?.longMessage || "").toLowerCase();
+
+  return (
+    code === "form_identifier_not_found" ||
+    message.includes("couldn't find") ||
+    message.includes("not found")
+  );
+};
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const clerk = useClerk();
   const { signIn } = useSignIn();
-  const appOrigin = window.location.origin;
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -51,8 +61,12 @@ const LoginPage = () => {
       setErrorMessage("");
 
       try {
-        const result = await signIn.create({
+        await signIn.create({
           identifier: normalizedEmail,
+        });
+
+        const result = await signIn.attemptFirstFactor({
+          strategy: "password",
           password: formData.password,
         });
 
@@ -64,6 +78,12 @@ const LoginPage = () => {
 
         setErrorMessage("Additional verification is required to continue.");
       } catch (error) {
+        if (shouldRedirectToSignUp(error)) {
+          const email = encodeURIComponent(normalizedEmail);
+          navigate(`/sign-up?email=${email}`, { replace: true });
+          return;
+        }
+
         const fallbackMessage =
           "Unable to sign in. Please check your credentials.";
         setErrorMessage(error?.errors?.[0]?.longMessage || fallbackMessage);
@@ -92,14 +112,15 @@ const LoginPage = () => {
         );
       }
 
-      const redirectUrl = `${appOrigin}/sign-in/sso-callback`;
-      const actionCompleteRedirectUrl = `${appOrigin}/`;
+      const redirectUrl = "/sign-in/sso-callback";
+      const actionCompleteRedirectUrl = "/";
 
       if (typeof signInResource.authenticateWithRedirect === "function") {
         await signInResource.authenticateWithRedirect({
           strategy: "oauth_google",
           redirectUrl,
           actionCompleteRedirectUrl,
+          oidcPrompt: "select_account",
         });
         return;
       }
@@ -108,6 +129,7 @@ const LoginPage = () => {
         strategy: "oauth_google",
         redirectUrl,
         actionCompleteRedirectUrl,
+        oidcPrompt: "select_account",
       });
       const nextUrl = resolveVerificationRedirect(
         result.firstFactorVerification,

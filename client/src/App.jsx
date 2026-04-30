@@ -1,13 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import {
-  ClerkLoaded,
-  ClerkLoading,
-  useAuth,
-} from "@clerk/react";
+import { ClerkLoaded, ClerkLoading, useAuth } from "@clerk/react";
 import AppLayout from "./components/layout/AppLayout";
-import SignInPage from "./pages/SignInPage";
-import SignUpPage from "./pages/SignUpPage";
 import AuthSetup from "./components/auth/AuthSetup";
 import LoginPage from "./loginpage/LoginPage";
 import SignUpPageCustom from "./loginpage/SignUpPageCustom";
@@ -62,6 +56,12 @@ const HomeEntryRoute = () => {
   return <Navigate to={isSignedIn ? "/" : "/sign-in"} replace />;
 };
 
+const PublicAuthRoute = ({ children }) => {
+  const { isSignedIn } = useAuth();
+
+  return isSignedIn ? <Navigate to="/" replace /> : children;
+};
+
 function App() {
   return (
     <>
@@ -74,13 +74,36 @@ function App() {
       <ClerkLoaded>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/demologin" element={<Navigate to="/sign-in" replace />} />
+            <Route
+              path="/demologin"
+              element={<Navigate to="/sign-in" replace />}
+            />
             <Route path="/home" element={<HomeEntryRoute />} />
             <Route path="/heropage" element={<HeroPage />} />
-            <Route path="/sign-in/forgot-password/*" element={<SignInPage />} />
-            <Route path="/sign-in/sso-callback/*" element={<OAuthCallbackPage />} />
-            <Route path="/sign-in/*" element={<LoginPage />} />
-            <Route path="/sign-up/*" element={<SignUpPageCustom />} />
+            <Route
+              path="/sign-in/forgot-password/*"
+              element={<Navigate to="/sign-in" replace />}
+            />
+            <Route
+              path="/sign-in/sso-callback/*"
+              element={<OAuthCallbackPage />}
+            />
+            <Route
+              path="/sign-in/*"
+              element={
+                <PublicAuthRoute>
+                  <LoginPage />
+                </PublicAuthRoute>
+              }
+            />
+            <Route
+              path="/sign-up/*"
+              element={
+                <PublicAuthRoute>
+                  <SignUpPageCustom />
+                </PublicAuthRoute>
+              }
+            />
 
             <Route path="/" element={<ProtectedLayout />}>
               <Route index element={<DashboardPage />} />

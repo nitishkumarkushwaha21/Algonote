@@ -11,7 +11,6 @@ const LoginEvent = sequelize.define(
     sessionId: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
   },
   {

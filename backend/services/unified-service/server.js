@@ -1,10 +1,7 @@
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
+require("./config/env");
 const sequelize = require("./src/config/database");
-
-require("dotenv").config({ path: path.resolve(__dirname, "../../../.env") });
-require("dotenv").config();
 
 const fileRoutes = require("./src/routes/fileRoutes");
 const problemRoutes = require("./src/routes/problemRoutes");
@@ -18,10 +15,6 @@ const isProduction = process.env.NODE_ENV === "production";
 const parsedPort = Number(PORT);
 if (!Number.isInteger(parsedPort) || parsedPort <= 0) {
   throw new Error(`[unified-service] Invalid port value: ${PORT}`);
-}
-
-if (!String(process.env.DATABASE_URL || "").trim()) {
-  throw new Error("[unified-service] Missing required env var: DATABASE_URL");
 }
 
 app.use(cors());

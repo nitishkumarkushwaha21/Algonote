@@ -44,137 +44,155 @@ const FolderItemsTable = ({
           {items.map((item) => {
             const fileVisualType = getFileVisualType(item);
             return (
-            <tr
-              key={item.id}
-              className="fit-row"
-              onClick={() => onNavigate(item)}
-            >
-              <td className="fit-td fit-td-pl">
-                <div className="fit-name-cell">
-                  {item.type === "folder" ? (
-                    <Folder size={16} className="fit-icon-folder" />
-                  ) : fileVisualType === "notes" ? (
-                    <FileText size={16} className="fit-icon-notes" />
-                  ) : fileVisualType === "gfg" ? (
-                    <FileCode size={16} className="fit-icon-gfg" />
-                  ) : fileVisualType === "leetcode" ? (
-                    <FileCode size={16} className="fit-icon-leetcode" />
-                  ) : (
-                    <FileCode size={16} className="fit-icon-file" />
-                  )}
-                  {renamingId === item.id ? (
-                    <input
-                      autoFocus
-                      type="text"
-                      value={renameValue}
-                      onChange={(event) => onRenameChange(event.target.value)}
-                      onKeyDown={onRenameKeyDown}
-                      onClick={(event) => event.stopPropagation()}
-                      onBlur={onRenameBlur}
-                      className="fit-rename-input"
-                    />
-                  ) : (
-                    <div className="fit-name-block">
-                      <span className="fit-item-name">{item.name}</span>
-                      {item.type === "file" && fileVisualType !== "notes" && (
-                        <div className="fit-meta-row">
-                          {item.difficulty && (
-                            <span className={clsx("fit-chip", `fit-chip-${item.difficulty.toLowerCase()}`)}>
-                              {item.difficulty}
-                            </span>
-                          )}
-                          {item.tags?.[0]?.name && (
-                            <span className="fit-chip fit-chip-tag">{item.tags[0].name}</span>
-                          )}
-                          {item.isImportant && (
-                            <span className="fit-chip fit-chip-important">Important</span>
-                          )}
-                        </div>
-                      )}
+              <tr
+                key={item.id}
+                className="fit-row"
+                onClick={() => onNavigate(item)}
+              >
+                <td className="fit-td fit-td-pl">
+                  <div className="fit-name-cell">
+                    {item.type === "folder" ? (
+                      <Folder size={16} className="fit-icon-folder" />
+                    ) : fileVisualType === "notes" ? (
+                      <FileText size={16} className="fit-icon-notes" />
+                    ) : fileVisualType === "gfg" ? (
+                      <FileCode size={16} className="fit-icon-gfg" />
+                    ) : fileVisualType === "leetcode" ? (
+                      <FileCode size={16} className="fit-icon-leetcode" />
+                    ) : (
+                      <FileCode size={16} className="fit-icon-file" />
+                    )}
+                    {renamingId === item.id ? (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={renameValue}
+                        onChange={(event) => onRenameChange(event.target.value)}
+                        onKeyDown={onRenameKeyDown}
+                        onClick={(event) => event.stopPropagation()}
+                        onBlur={onRenameBlur}
+                        className="fit-rename-input"
+                      />
+                    ) : (
+                      <div className="fit-name-block">
+                        <span className="fit-item-name">{item.name}</span>
+                        {item.type === "file" && fileVisualType !== "notes" && (
+                          <div className="fit-meta-row">
+                            {item.difficulty && (
+                              <span
+                                className={clsx(
+                                  "fit-chip",
+                                  `fit-chip-${item.difficulty.toLowerCase()}`,
+                                )}
+                              >
+                                {item.difficulty}
+                              </span>
+                            )}
+                            {item.tags?.[0]?.name && (
+                              <span className="fit-chip fit-chip-tag">
+                                {item.tags[0].name}
+                              </span>
+                            )}
+                            {item.isImportant && (
+                              <span className="fit-chip fit-chip-important">
+                                Important
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </td>
+
+                <td className="fit-td">
+                  {item.type === "file" && (
+                    <div className="fit-state-group">
+                      <button
+                        onClick={(event) => onToggleSolved(event, item)}
+                        className={clsx(
+                          "fit-toggle",
+                          item.isSolved ? "fit-toggle-solved" : "",
+                        )}
+                        title={item.isSolved ? "Solved" : "Mark solved"}
+                      >
+                        <CheckCircle2 size={12} />
+                        <span>Solved</span>
+                      </button>
+
+                      <button
+                        onClick={(event) => onToggleRevision(event, item)}
+                        className={clsx(
+                          "fit-toggle",
+                          item.isRevised ? "fit-toggle-revised" : "",
+                        )}
+                        title={item.isRevised ? "Revised" : "Mark revised"}
+                      >
+                        {item.isRevised ? (
+                          <CheckCircle2 size={12} />
+                        ) : (
+                          <Circle size={12} />
+                        )}
+                        <span>Rev</span>
+                      </button>
+
+                      <button
+                        onClick={(event) => onToggleImportant(event, item)}
+                        className={clsx(
+                          "fit-toggle fit-toggle-icon",
+                          item.isImportant ? "fit-toggle-important" : "",
+                        )}
+                        title={
+                          item.isImportant ? "Important" : "Mark important"
+                        }
+                      >
+                        <Star size={12} />
+                      </button>
                     </div>
                   )}
-                </div>
-              </td>
+                </td>
 
-              <td className="fit-td">
-                {item.type === "file" && (
-                  <div className="fit-state-group">
+                <td className="fit-td fit-td-date">
+                  {item.type === "file"
+                    ? new Date(item.updatedAt || Date.now()).toLocaleDateString(
+                        "en-IN",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        },
+                      )
+                    : "—"}
+                </td>
+
+                <td className="fit-td fit-td-actions">
+                  <div className="fit-actions">
+                    {item.type === "file" && item.link && (
+                      <button
+                        onClick={(event) => onOpenLink(event, item)}
+                        className="fit-action-btn fit-action-link"
+                        title="Open source problem"
+                      >
+                        <ExternalLink size={13} />
+                      </button>
+                    )}
                     <button
-                      onClick={(event) => onToggleSolved(event, item)}
-                      className={clsx(
-                        "fit-toggle",
-                        item.isSolved ? "fit-toggle-solved" : "",
-                      )}
-                      title={item.isSolved ? "Solved" : "Mark solved"}
+                      onClick={(event) => onRenameStart(event, item)}
+                      className="fit-action-btn"
+                      title="Rename"
                     >
-                      <CheckCircle2 size={12} />
-                      <span>Solved</span>
+                      <Edit2 size={13} />
                     </button>
-
                     <button
-                      onClick={(event) => onToggleRevision(event, item)}
-                      className={clsx(
-                        "fit-toggle",
-                        item.isRevised ? "fit-toggle-revised" : "",
-                      )}
-                      title={item.isRevised ? "Revised" : "Mark revised"}
+                      onClick={(event) => onDelete(event, item.id)}
+                      className="fit-action-btn fit-action-del"
+                      title="Delete"
                     >
-                      {item.isRevised ? <CheckCircle2 size={12} /> : <Circle size={12} />}
-                      <span>Rev</span>
-                    </button>
-
-                    <button
-                      onClick={(event) => onToggleImportant(event, item)}
-                      className={clsx(
-                        "fit-toggle fit-toggle-icon",
-                        item.isImportant ? "fit-toggle-important" : "",
-                      )}
-                      title={item.isImportant ? "Important" : "Mark important"}
-                    >
-                      <Star size={12} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
-                )}
-              </td>
-
-              <td className="fit-td fit-td-date">
-                {item.type === "file"
-                  ? new Date(item.updatedAt || Date.now()).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : "—"}
-              </td>
-
-              <td className="fit-td fit-td-actions">
-                <div className="fit-actions">
-                  {item.type === "file" && item.link && (
-                    <button
-                      onClick={(event) => onOpenLink(event, item)}
-                      className="fit-action-btn fit-action-link"
-                      title="Open source problem"
-                    >
-                      <ExternalLink size={13} />
-                    </button>
-                  )}
-                  <button
-                    onClick={(event) => onRenameStart(event, item)}
-                    className="fit-action-btn"
-                    title="Rename"
-                  >
-                    <Edit2 size={13} />
-                  </button>
-                  <button
-                    onClick={(event) => onDelete(event, item.id)}
-                    className="fit-action-btn fit-action-del"
-                    title="Delete"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </td>
-            </tr>
+                </td>
+              </tr>
             );
           })}
         </tbody>
@@ -233,7 +251,7 @@ const tableCss = `
   .fit-td-actions { text-align: right; padding-right: 20px; }
 
   .fit-name-cell { display: flex; align-items: center; gap: 10px; }
-  .fit-name-block { min-width: 0; }
+  .fit-name-block { min-width: 0; max-width: 100%; }
   .fit-icon-folder { color: #7ab8f0; flex-shrink: 0; }
   .fit-icon-file { color: #f0c97a; flex-shrink: 0; }
   .fit-icon-leetcode { color: #f4d03f; flex-shrink: 0; }
@@ -242,10 +260,11 @@ const tableCss = `
   .fit-item-name {
     display: block;
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 12px;
+    line-height: 1.3;
     font-weight: 500;
+    white-space: normal;
+    overflow-wrap: anywhere;
     color: rgba(255,255,255,0.9);
   }
   .fit-meta-row {
@@ -274,15 +293,20 @@ const tableCss = `
   .fit-chip-important { color: #facc15; border-color: rgba(250,204,21,0.22); background: rgba(250,204,21,0.10); }
 
   .fit-rename-input {
-    max-width: 200px;
+    width: 100%;
+    min-width: 0;
     border-radius: 7px;
-    border: 1px solid rgba(255,255,255,0.25);
-    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(186,230,253,0.38);
+    background: rgba(7,12,22,0.94);
     padding: 4px 8px;
-    color: #fff;
-    font-size: 13px;
+    color: rgba(240,249,255,0.98);
+    font-size: 12px;
     font-family: 'JetBrains Mono', monospace;
     outline: none;
+  }
+  .fit-rename-input:focus {
+    border-color: rgba(125,211,252,0.62);
+    box-shadow: 0 0 0 1px rgba(125,211,252,0.24);
   }
 
   .fit-state-group {

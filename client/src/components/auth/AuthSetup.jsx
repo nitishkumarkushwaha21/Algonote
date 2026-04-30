@@ -8,34 +8,58 @@ import {
 import useFileStore from "../../store/useFileStore";
 
 const AuthSetup = () => {
-  const { getToken, isSignedIn, userId, sessionId } = useAuth();
+  const { getToken, isLoaded, isSignedIn, userId, sessionId } = useAuth();
   const resetForUser = useFileStore((state) => state.resetForUser);
   const loadFileSystem = useFileStore((state) => state.loadFileSystem);
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
     setAuthTokenGetter(getToken);
     setAuthUserIdGetter(() => userId || null);
-
-    return () => {
-      setAuthTokenGetter(null);
-      setAuthUserIdGetter(null);
-    };
-  }, [getToken, userId]);
+  }, [getToken, isLoaded, userId]);
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
     if (!isSignedIn || !userId) {
+      setAuthTokenGetter(null);
       setAuthUserIdGetter(null);
       resetForUser();
       return;
     }
 
-    // On user switch, clear old tree first, then fetch user-scoped data.
-    resetForUser();
-    loadFileSystem();
-  }, [isSignedIn, userId, resetForUser, loadFileSystem]);
+    let cancelled = false;
+
+    const bootstrapUserData = async () => {
+      // On user switch, clear old tree first, then fetch user-scoped data.
+      resetForUser();
+
+      const loaded = await loadFileSystem({ force: true });
+      if (!loaded && !cancelled) {
+        console.error("Initial file system load did not complete");
+      }
+    };
+
+    bootstrapUserData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, userId, resetForUser, loadFileSystem]);
 
   useEffect(() => {
-    if (!isSignedIn || !userId || !sessionId || typeof window === "undefined") {
+    if (
+      !isLoaded ||
+      !isSignedIn ||
+      !userId ||
+      !sessionId ||
+      typeof window === "undefined"
+    ) {
       return;
     }
 
@@ -57,7 +81,7 @@ const AuthSetup = () => {
       .catch((error) => {
         console.error("Failed to record login", error);
       });
-  }, [isSignedIn, userId, sessionId]);
+  }, [isLoaded, isSignedIn, userId, sessionId]);
 
   return null;
 };

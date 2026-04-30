@@ -46,6 +46,8 @@ const ProblemComplexityFields = ({
   hasPrev,
   onNext,
   hasNext,
+  isNavigating = false,
+  navigatingDirection = null,
 }) => {
   return (
     <div className="border-t border-white/6 bg-[#101010] px-4 py-2.5">
@@ -64,27 +66,27 @@ const ProblemComplexityFields = ({
           <button
             type="button"
             onClick={onPrev}
-            disabled={!hasPrev}
+            disabled={!hasPrev || isNavigating}
             className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
-              hasPrev
+              hasPrev && !isNavigating
                 ? "border-white/12 bg-white/[0.05] text-white/78 hover:bg-white/[0.08]"
                 : "cursor-not-allowed border-white/8 bg-white/[0.03] text-white/28"
             }`}
           >
             <ArrowLeft size={13} />
-            Prev
+            {isNavigating && navigatingDirection === "prev" ? "Loading" : "Prev"}
           </button>
           <button
             type="button"
             onClick={onNext}
-            disabled={!hasNext}
+            disabled={!hasNext || isNavigating}
             className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
-              hasNext
+              hasNext && !isNavigating
                 ? "border-blue-500/22 bg-blue-500/12 text-blue-200 hover:bg-blue-500/18"
                 : "cursor-not-allowed border-white/8 bg-white/[0.03] text-white/28"
             }`}
           >
-            Next
+            {isNavigating && navigatingDirection === "next" ? "Loading" : "Next"}
             <ArrowRight size={13} />
           </button>
         </div>

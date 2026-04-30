@@ -11,6 +11,7 @@ const css = `
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: 0 14px 28px rgba(0,0,0,0.32);
     background: rgba(255,255,255,0.02);
+    overflow: hidden;
   }
   .fc-card:hover {
     transform: translateY(-3px);
@@ -68,15 +69,17 @@ const css = `
 
   .fc-flap-name {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 22px;
+    font-size: 15px;
     font-weight: 600;
     color: rgba(255,255,255,0.98);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     position: relative;
     z-index: 2;
-    line-height: 1.1;
+    line-height: 1.2;
     letter-spacing: -0.03em;
   }
   .fc-flap-count {
@@ -162,26 +165,31 @@ const css = `
   .fc-dd-sep { height: 1px; background: rgba(255,255,255,0.07); }
 
   .fc-rename-bar {
-    position: absolute; bottom: 48px; left: 0; right: 0;
+    position: absolute; bottom: 0; left: 0; right: 0;
     padding: 8px 10px;
-    background: rgba(10,10,10,0.94);
+    background: rgba(8,12,22,0.96);
     border-top: 1px solid rgba(255,255,255,0.10);
-    border-radius: 0 0 16px 16px;
+    border-radius: 0 0 20px 20px;
     display: flex; gap: 6px; align-items: center;
     z-index: 70;
+    min-width: 0;
   }
   .fc-rename-bar { display: none; }
   .fc-rename-bar.show { display: flex; }
   .fc-rename-input {
     flex: 1;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 7px; padding: 5px 10px;
-    color: #fff; font-size: 13px; font-weight: 600;
+    min-width: 0;
+    background: rgba(4,9,19,0.96);
+    border: 1px solid rgba(186,230,253,0.34);
+    border-radius: 7px; padding: 5px 9px;
+    color: rgba(240,249,255,0.98); font-size: 12px; font-weight: 600;
     font-family: 'JetBrains Mono', monospace;
     outline: none;
   }
-  .fc-rename-input:focus { border-color: rgba(255,255,255,0.4); }
+  .fc-rename-input:focus {
+    border-color: rgba(125,211,252,0.60);
+    box-shadow: 0 0 0 1px rgba(125,211,252,0.26);
+  }
   .fc-rename-ok {
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.14);
@@ -254,10 +262,40 @@ const FolderIcon = ({ name }) => {
         </clipPath>
       </defs>
 
-      <rect x="12" y="0" width="80" height="17" rx="7" fill="rgba(255,255,255,0.10)" />
-      <rect x="0" y="14" width="280" height="196" rx="16" fill="rgba(0,0,0,0.82)" />
-      <rect x="0" y="14" width="280" height="196" rx="16" fill={`url(#fc-bg-${id})`} />
-      <rect x=".5" y="14.5" width="279" height="195" rx="15.5" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+      <rect
+        x="12"
+        y="0"
+        width="80"
+        height="17"
+        rx="7"
+        fill="rgba(255,255,255,0.10)"
+      />
+      <rect
+        x="0"
+        y="14"
+        width="280"
+        height="196"
+        rx="16"
+        fill="rgba(0,0,0,0.82)"
+      />
+      <rect
+        x="0"
+        y="14"
+        width="280"
+        height="196"
+        rx="16"
+        fill={`url(#fc-bg-${id})`}
+      />
+      <rect
+        x=".5"
+        y="14.5"
+        width="279"
+        height="195"
+        rx="15.5"
+        fill="none"
+        stroke="rgba(255,255,255,0.07)"
+        strokeWidth="1"
+      />
       <g clipPath={`url(#fc-clip-${id})`}>
         <rect
           x="18"
@@ -370,11 +408,11 @@ const FolderCard = ({ folder, onRename, onDelete, onOpen }) => {
 
         <div className="fc-icon">
           <FolderIcon name={folder.name} />
-        <div className="fc-glass-flap">
-          <div className="fc-flap-name">/{folder.name}</div>
-          <div className="fc-flap-count">
-            {folder.files} {folder.files === 1 ? "file" : "files"}
-          </div>
+          <div className="fc-glass-flap">
+            <div className="fc-flap-name">/{folder.name}</div>
+            <div className="fc-flap-count">
+              {folder.files} {folder.files === 1 ? "file" : "files"}
+            </div>
           </div>
         </div>
 
@@ -437,7 +475,14 @@ const FolderCard = ({ folder, onRename, onDelete, onOpen }) => {
                   setRenaming(true);
                 }}
               >
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 13 13"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                >
                   <path d="M2 9.5l1.5-1.5 5-5 1.5 1.5-5 5L2 11z" />
                   <path d="M8.5 3l1.5 1.5" />
                 </svg>
@@ -452,7 +497,14 @@ const FolderCard = ({ folder, onRename, onDelete, onOpen }) => {
                   setConfirming(true);
                 }}
               >
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 13 13"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                >
                   <path d="M2 3.5h9M4.5 3.5V2.5h4v1M3 3.5l.6 7.5h5.8l.6-7.5" />
                 </svg>
                 Delete

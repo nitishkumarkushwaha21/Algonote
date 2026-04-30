@@ -24,6 +24,42 @@ const api = axios.create({
   },
 });
 
+const RETRY_DELAYS_MS = [500, 1200, 2500, 4000, 6000, 8000];
+
+const shouldRetryRequest = (error) => {
+  const status = error?.response?.status;
+  const code = error?.code;
+
+  return status === 502 || code === "ERR_NETWORK" || code === "ECONNABORTED";
+};
+
+const wait = (delay) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, delay);
+  });
+
+const withRetry = async (requestFn) => {
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      lastError = error;
+      if (
+        attempt === RETRY_DELAYS_MS.length ||
+        !shouldRetryRequest(error)
+      ) {
+        break;
+      }
+
+      await wait(RETRY_DELAYS_MS[attempt]);
+    }
+  }
+
+  throw lastError;
+};
+
 api.interceptors.request.use(async (config) => {
   if (authTokenGetter) {
     const token = await authTokenGetter();
@@ -56,8 +92,9 @@ export const fileService = {
 };
 
 export const statsService = {
-  getLoginStats: () => api.get("/stats/logins"),
-  recordLogin: (sessionId) => api.post("/stats/logins", { sessionId }),
+  getLoginStats: () => withRetry(() => api.get("/stats/logins")),
+  recordLogin: (sessionId) =>
+    withRetry(() => api.post("/stats/logins", { sessionId })),
 };
 
 export default api;

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useClerk, useSignUp } from "@clerk/react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import heroImage from "./hero (1).webp";
 import "./LoginPage.css";
 
@@ -13,11 +13,15 @@ const resolveVerificationRedirect = (verification) => {
 
 const SignUpPageCustom = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const clerk = useClerk();
   const { signUp } = useSignUp();
-  const appOrigin = window.location.origin;
+  const prefilledEmail = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("email") || "";
+  }, [location.search]);
   const [formData, setFormData] = useState({
-    email: "",
+    email: prefilledEmail,
     password: "",
     confirmPassword: "",
   });
@@ -66,10 +70,13 @@ const SignUpPageCustom = () => {
         return;
       }
 
-      navigate("/sign-up/continue", { replace: true });
+      setErrorMessage(
+        "Sign up is not complete yet. Please check your details and try again.",
+      );
     } catch (error) {
       const fallbackMessage = "Unable to sign up. Please try again.";
       setErrorMessage(error?.errors?.[0]?.longMessage || fallbackMessage);
+    } finally {
       setIsFormSubmitting(false);
     }
   };
@@ -86,17 +93,20 @@ const SignUpPageCustom = () => {
       const signUpResource = clerk?.client?.signUp ?? signUp;
 
       if (!signUpResource) {
-        throw new Error("Authentication is not initialized yet. Please refresh and try again.");
+        throw new Error(
+          "Authentication is not initialized yet. Please refresh and try again.",
+        );
       }
 
-      const redirectUrl = `${appOrigin}/sign-in/sso-callback`;
-      const actionCompleteRedirectUrl = `${appOrigin}/`;
+      const redirectUrl = "/sign-in/sso-callback";
+      const actionCompleteRedirectUrl = "/";
 
       if (typeof signUpResource.authenticateWithRedirect === "function") {
         await signUpResource.authenticateWithRedirect({
           strategy: "oauth_google",
           redirectUrl,
           actionCompleteRedirectUrl,
+          oidcPrompt: "select_account",
         });
         return;
       }
@@ -105,6 +115,7 @@ const SignUpPageCustom = () => {
         strategy: "oauth_google",
         redirectUrl,
         actionCompleteRedirectUrl,
+        oidcPrompt: "select_account",
       });
       const nextUrl = resolveVerificationRedirect(
         result.verifications?.externalAccount,
@@ -225,7 +236,11 @@ const SignUpPageCustom = () => {
 
         <div className="login-right">
           <div className="hero-image-container">
-            <img src={heroImage} alt="Hero illustration" className="hero-image" />
+            <img
+              src={heroImage}
+              alt="Hero illustration"
+              className="hero-image"
+            />
           </div>
         </div>
 

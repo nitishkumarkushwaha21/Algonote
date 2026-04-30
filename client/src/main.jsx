@@ -14,6 +14,10 @@ createRoot(document.getElementById("root")).render(
         publishableKey={clerkPublishableKey}
         signInUrl="/sign-in"
         signUpUrl="/sign-up"
+        signInForceRedirectUrl="/"
+        signUpForceRedirectUrl="/"
+        signInFallbackRedirectUrl="/"
+        signUpFallbackRedirectUrl="/"
         afterSignOutUrl="/sign-in"
       >
         <BrowserRouter>

@@ -2,7 +2,7 @@
   "name": "leetcode-revision-root",
   "version": "1.0.0",
   "scripts": {
-    "start:backend": "concurrently \"cross-env NODE_ENV=development ENABLE_DEV_AUTH_FALLBACK=true npm start --prefix backend/gateway\" \"cross-env NODE_ENV=development npm start --prefix backend/services/unified-service\" \"cross-env NODE_ENV=development npm start --prefix backend/services/youtube-playlist-service\" \"cross-env NODE_ENV=development npm start --prefix backend/services/profile-analysis-service\""
+    "start:backend": "node --env-file=.env ./node_modules/concurrently/dist/bin/concurrently.js \"cross-env NODE_ENV=development ENABLE_DEV_AUTH_FALLBACK=true npm start --prefix backend/gateway\" \"cross-env NODE_ENV=development npm start --prefix backend/services/unified-service\" \"cross-env NODE_ENV=development npm start --prefix backend/services/youtube-playlist-service\" \"cross-env NODE_ENV=development npm start --prefix backend/services/profile-analysis-service\""
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

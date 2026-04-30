@@ -184,13 +184,15 @@ const css = `
     margin: 0;
     color: var(--sfc-title);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 600;
-    line-height: 1.02;
+    line-height: 1.22;
     letter-spacing: -0.045em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   .sfc-menu-wrap {
@@ -282,23 +284,26 @@ const css = `
     gap: 8px;
     align-items: center;
     padding: 0 18px 14px;
+    min-width: 0;
   }
 
   .sfc-rename-input {
     flex: 1;
     height: 38px;
+    min-width: 0;
     border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.04);
-    color: #fff;
-    padding: 0 12px;
+    border: 1px solid rgba(186,230,253,0.34);
+    background: rgba(7,12,22,0.94);
+    color: rgba(240,249,255,0.98);
+    padding: 0 11px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 12px;
     outline: none;
   }
 
   .sfc-rename-input:focus {
-    border-color: rgba(96,165,250,0.34);
+    border-color: rgba(125,211,252,0.62);
+    box-shadow: 0 0 0 1px rgba(125,211,252,0.24);
   }
 
   .sfc-rename-btn {
@@ -419,7 +424,13 @@ const formatDate = (dateValue) =>
     year: "numeric",
   });
 
-const FolderThemeTwo = ({ folder, onDelete, onOpen, onRename, theme = "default" }) => {
+const FolderThemeTwo = ({
+  folder,
+  onDelete,
+  onOpen,
+  onRename,
+  theme = "default",
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -565,7 +576,9 @@ const FolderThemeTwo = ({ folder, onDelete, onOpen, onRename, theme = "default" 
             <div className="sfc-meta">
               {folder.files} {folder.files === 1 ? "problem" : "problems"}
             </div>
-            <div className="sfc-date">{formatDate(folder.created || Date.now())}</div>
+            <div className="sfc-date">
+              {formatDate(folder.created || Date.now())}
+            </div>
           </div>
         </div>
 

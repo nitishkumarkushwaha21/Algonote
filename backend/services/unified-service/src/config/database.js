@@ -1,12 +1,6 @@
 const { Sequelize } = require("sequelize");
 const dns = require("dns");
 const { Resolver } = require("dns");
-const path = require("path");
-
-require("dotenv").config({
-  path: path.resolve(__dirname, "../../../../../.env"),
-});
-require("dotenv").config();
 
 const resolver = new Resolver();
 resolver.setServers(["8.8.8.8", "8.8.4.4"]);
@@ -68,7 +62,7 @@ console.log(
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
-    "[unified-service] Missing DATABASE_URL. Configure it in root .env before starting the service.",
+    "[unified-service] Missing DATABASE_URL.",
   );
 }
 

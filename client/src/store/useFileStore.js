@@ -6,8 +6,12 @@ import {
   updateTreeNode,
 } from "../utils/fileTree";
 
-const FILE_SYSTEM_RETRY_DELAYS_MS = [500, 1200, 2500, 4000, 6000];
+const FILE_SYSTEM_RETRY_DELAYS_MS = [500, 1200, 2500, 4000, 6000, 8000, 10000];
+const PROBLEM_CACHE_MAX_ENTRIES = 40;
+const PROBLEM_CACHE_TTL_MS = 10 * 60 * 1000;
 let loadFileSystemPromise = null;
+const problemCache = new Map();
+const problemInFlightRequests = new Map();
 
 const defaultSolutionEntries = () => [
   {
@@ -43,6 +47,56 @@ const shouldRetryFileSystemLoad = (error) => {
   return status === 502 || code === "ERR_NETWORK" || code === "ECONNABORTED";
 };
 
+const normalizeFileId = (fileId) => String(fileId);
+
+const getCachedProblem = (fileId) => {
+  const key = normalizeFileId(fileId);
+  const cached = problemCache.get(key);
+
+  if (!cached) {
+    return null;
+  }
+
+  if (Date.now() - cached.timestamp > PROBLEM_CACHE_TTL_MS) {
+    problemCache.delete(key);
+    return null;
+  }
+
+  // Move to back for LRU ordering.
+  problemCache.delete(key);
+  problemCache.set(key, cached);
+  return cached.data;
+};
+
+const setCachedProblem = (fileId, data) => {
+  const key = normalizeFileId(fileId);
+  if (problemCache.has(key)) {
+    problemCache.delete(key);
+  }
+
+  problemCache.set(key, {
+    data,
+    timestamp: Date.now(),
+  });
+
+  while (problemCache.size > PROBLEM_CACHE_MAX_ENTRIES) {
+    const oldestKey = problemCache.keys().next().value;
+    problemCache.delete(oldestKey);
+  }
+};
+
+const clearProblemCache = () => {
+  problemCache.clear();
+  problemInFlightRequests.clear();
+};
+
+const syncProblemCacheFromTree = (get, fileId) => {
+  const nextFile = findTreeNode(get().fileSystem, fileId);
+  if (nextFile && nextFile.type === "file") {
+    setCachedProblem(fileId, nextFile);
+  }
+};
+
 const useFileStore = create((set, get) => ({
   fileSystem: [], // Initially empty, loaded from API
   activeFileId: null,
@@ -51,7 +105,8 @@ const useFileStore = create((set, get) => ({
   error: null,
   hasLoadedFileSystem: false,
 
-  resetForUser: () =>
+  resetForUser: () => {
+    clearProblemCache();
     set({
       fileSystem: [],
       activeFileId: null,
@@ -59,7 +114,8 @@ const useFileStore = create((set, get) => ({
       isLoading: false,
       error: null,
       hasLoadedFileSystem: false,
-    }),
+    });
+  },
 
   // Fetch initial file tree
   loadFileSystem: async ({ force = false } = {}) => {
@@ -131,32 +187,129 @@ const useFileStore = create((set, get) => ({
 
   setActiveFile: async (fileId) => {
     set({ activeFileId: fileId });
-    // When selecting a file, ensure we have its latest content/problem details
-    // We could eager load or lazy load. For now, we find it in tree, if content is missing, we might need to fetch.
-    // However, our getFileSystem might be shallow? Use getProblem for details.
 
-    // Find file type
     const file = findTreeNode(get().fileSystem, fileId);
     if (file && file.type === "file") {
-      // Always fetch full problem details to ensure we have latest data
       try {
-        const res = await fileService.getProblem(fileId);
-        // Merge problem details into store
+        await get().getProblemWithCache(fileId);
+      } catch (err) {
+        console.error("Failed to load problem details", err);
+      }
+    }
+  },
+
+  getProblemWithCache: async (fileId, { forceRefresh = false } = {}) => {
+    const key = normalizeFileId(fileId);
+    if (!forceRefresh) {
+      const cached = getCachedProblem(fileId);
+      if (cached) {
         set((state) => ({
           fileSystem: updateTreeNode(state.fileSystem, fileId, (item) => ({
             ...item,
-            ...res.data,
+            ...cached,
             id: item.id,
             name: item.name,
             type: item.type,
             parentId: item.parentId,
           })),
         }));
-        console.log("✅ Problem data refreshed for file:", fileId);
-      } catch (err) {
-        console.error("Failed to load problem details", err);
+        return cached;
       }
     }
+
+    const inFlight = problemInFlightRequests.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const requestPromise = fileService
+      .getProblem(fileId)
+      .then((response) => {
+        const problemData = response.data;
+        setCachedProblem(fileId, problemData);
+
+        set((state) => ({
+          fileSystem: updateTreeNode(state.fileSystem, fileId, (item) => ({
+            ...item,
+            ...problemData,
+            id: item.id,
+            name: item.name,
+            type: item.type,
+            parentId: item.parentId,
+          })),
+        }));
+
+        return problemData;
+      })
+      .finally(() => {
+        problemInFlightRequests.delete(key);
+      });
+
+    problemInFlightRequests.set(key, requestPromise);
+    return requestPromise;
+  },
+
+  peekProblemCache: (fileId) => getCachedProblem(fileId),
+
+  prefetchProblem: async (fileId) => {
+    if (!fileId) {
+      return;
+    }
+
+    const file = findTreeNode(get().fileSystem, fileId);
+    if (!file || file.type !== "file") {
+      return;
+    }
+
+    try {
+      await get().getProblemWithCache(fileId);
+    } catch (error) {
+      console.error(`Failed to prefetch problem ${fileId}`, error);
+    }
+  },
+
+  prefetchAround: async (currentFileId, siblingFileIds, windowSize = 3) => {
+    if (
+      !currentFileId ||
+      !Array.isArray(siblingFileIds) ||
+      siblingFileIds.length === 0
+    ) {
+      return;
+    }
+
+    const currentId = normalizeFileId(currentFileId);
+    const normalizedSiblings = siblingFileIds.map((id) => normalizeFileId(id));
+    const currentIndex = normalizedSiblings.findIndex((id) => id === currentId);
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const prefetchIds = [];
+    for (let offset = 1; offset <= windowSize; offset += 1) {
+      const prevId = normalizedSiblings[currentIndex - offset];
+      const nextId = normalizedSiblings[currentIndex + offset];
+
+      if (prevId) {
+        prefetchIds.push(prevId);
+      }
+      if (nextId) {
+        prefetchIds.push(nextId);
+      }
+    }
+
+    await Promise.allSettled(
+      prefetchIds.map((id) => get().prefetchProblem(id)),
+    );
+  },
+
+  invalidateProblemCache: (fileId) => {
+    if (!fileId) {
+      return;
+    }
+
+    const key = normalizeFileId(fileId);
+    problemCache.delete(key);
+    problemInFlightRequests.delete(key);
   },
 
   toggleFolder: (folderId) =>
@@ -215,6 +368,7 @@ const useFileStore = create((set, get) => ({
   deleteItem: async (itemId) => {
     try {
       await fileService.deleteFileNode(itemId);
+      get().invalidateProblemCache(itemId);
       set((state) => ({
         fileSystem: removeTreeNode(state.fileSystem, itemId),
       }));
@@ -240,6 +394,7 @@ const useFileStore = create((set, get) => ({
         })),
       };
     });
+    syncProblemCacheFromTree(get, fileId);
 
     // Debounced API call appropriate here, but for now direct call
     try {
@@ -250,6 +405,7 @@ const useFileStore = create((set, get) => ({
           entry.id === solutionType ? { ...entry, code: newContent } : entry,
         ),
       });
+      syncProblemCacheFromTree(get, fileId);
     } catch (error) {
       console.error("Failed to save content", error);
     }
@@ -265,8 +421,10 @@ const useFileStore = create((set, get) => ({
         })),
       };
     });
+    syncProblemCacheFromTree(get, fileId);
 
     await fileService.updateProblem(fileId, { notes });
+    syncProblemCacheFromTree(get, fileId);
   },
 
   updateFileLink: async (fileId, link) => {
@@ -279,8 +437,10 @@ const useFileStore = create((set, get) => ({
         })),
       };
     });
+    syncProblemCacheFromTree(get, fileId);
 
     await fileService.updateFileNode(fileId, { link });
+    syncProblemCacheFromTree(get, fileId);
   },
 
   updateFileAnalysis: async (fileId, analysis) => {
@@ -293,11 +453,13 @@ const useFileStore = create((set, get) => ({
         })),
       };
     });
+    syncProblemCacheFromTree(get, fileId);
 
     await fileService.updateProblem(fileId, { analysis });
+    syncProblemCacheFromTree(get, fileId);
   },
 
-  mergeProblemDetails: (fileId, details) =>
+  mergeProblemDetails: (fileId, details) => {
     set((state) => ({
       fileSystem: updateTreeNode(state.fileSystem, fileId, (item) => ({
         ...item,
@@ -318,7 +480,9 @@ const useFileStore = create((set, get) => ({
           optimal: details.solutions?.optimal ?? item.solutions?.optimal ?? "",
         },
       })),
-    })),
+    }));
+    syncProblemCacheFromTree(get, fileId);
+  },
 
   updateFileFlags: async (fileId, flags) => {
     set((state) => ({
@@ -365,8 +529,10 @@ const useFileStore = create((set, get) => ({
         solutionEntries,
       })),
     }));
+    syncProblemCacheFromTree(get, fileId);
 
     await fileService.updateProblem(fileId, { solutionEntries });
+    syncProblemCacheFromTree(get, fileId);
   },
 
   renameItem: async (fileId, newName) => {
@@ -379,8 +545,10 @@ const useFileStore = create((set, get) => ({
         })),
       };
     });
+    syncProblemCacheFromTree(get, fileId);
 
     await fileService.updateFileNode(fileId, { name: newName });
+    syncProblemCacheFromTree(get, fileId);
   },
 }));
 

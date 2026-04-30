@@ -64,6 +64,9 @@ const ProblemEditorPage = () => {
     activeFileId,
     fileSystem,
     setActiveFile,
+    getProblemWithCache,
+    peekProblemCache,
+    prefetchAround,
     updateFileAnalysis,
     updateFileContent,
     updateFileNotes,
@@ -75,6 +78,8 @@ const ProblemEditorPage = () => {
   const [isProblemLoading, setIsProblemLoading] = useState(true);
   const [problemRecord, setProblemRecord] = useState(null);
   const [noteDraft, setNoteDraft] = useState("");
+  const [isNavigatingProblem, setIsNavigatingProblem] = useState(false);
+  const [navigatingDirection, setNavigatingDirection] = useState(null);
 
   const activeFile = id ? findTreeNode(fileSystem, id) : null;
   const [localLink, setLocalLink] = useState(activeFile?.link || "");
@@ -96,8 +101,7 @@ const ProblemEditorPage = () => {
         codeSnippets: problemRecord?.codeSnippets ?? activeFile.codeSnippets,
         tags: problemRecord?.tags ?? activeFile.tags,
         notes: problemRecord?.notes ?? activeFile.notes,
-        solutionEntries:
-          problemRecord?.solutionEntries ??
+        solutionEntries: problemRecord?.solutionEntries ??
           activeFile.solutionEntries ?? [
             { id: "optimal", label: "Optimal", code: "" },
           ],
@@ -113,7 +117,11 @@ const ProblemEditorPage = () => {
   const parentFolder = id ? findParentFolder(fileSystem, id) : null;
   const siblingProblems = (parentFolder?.children || [])
     .filter((item) => item.type === "file")
-    .sort((left, right) => String(left.id).localeCompare(String(right.id), undefined, { numeric: true }));
+    .sort((left, right) =>
+      String(left.id).localeCompare(String(right.id), undefined, {
+        numeric: true,
+      }),
+    );
   const currentProblemIndex = siblingProblems.findIndex(
     (item) => String(item.id) === String(id),
   );
@@ -153,11 +161,15 @@ const ProblemEditorPage = () => {
     }
 
     let isCancelled = false;
+    const cached = peekProblemCache(id);
+    if (cached) {
+      setProblemRecord(cached);
+    }
     setIsProblemLoading(true);
 
     const loadProblemRecord = async () => {
       try {
-        const { data } = await fileService.getProblem(id);
+        const data = await getProblemWithCache(id);
         if (!isCancelled) {
           setProblemRecord(data);
           setIsProblemLoading(false);
@@ -175,10 +187,31 @@ const ProblemEditorPage = () => {
     return () => {
       isCancelled = true;
     };
+  }, [getProblemWithCache, id, peekProblemCache]);
+
+  useEffect(() => {
+    setIsNavigatingProblem(false);
+    setNavigatingDirection(null);
   }, [id]);
 
   useEffect(() => {
-    if (!isNotesFile || !activeFileId || noteDraft === (problemView?.notes || "")) {
+    if (!id || siblingProblems.length === 0) {
+      return;
+    }
+
+    void prefetchAround(
+      id,
+      siblingProblems.map((item) => item.id),
+      3,
+    );
+  }, [id, prefetchAround, siblingProblems]);
+
+  useEffect(() => {
+    if (
+      !isNotesFile ||
+      !activeFileId ||
+      noteDraft === (problemView?.notes || "")
+    ) {
       return undefined;
     }
 
@@ -187,17 +220,23 @@ const ProblemEditorPage = () => {
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeFileId, isNotesFile, noteDraft, problemView?.notes, updateFileNotes]);
+  }, [
+    activeFileId,
+    isNotesFile,
+    noteDraft,
+    problemView?.notes,
+    updateFileNotes,
+  ]);
+
+  const hasRenderableProblemData =
+    Boolean(problemRecord) ||
+    Boolean(activeFile?.description) ||
+    Boolean(activeFile?.solutionEntries?.length);
 
   const showProblemSkeleton =
     isLoading ||
     (allFiles.length === 0 && id) ||
-    (!isNotesFile &&
-      !!id &&
-      (!!activeFile || allFiles.length > 0) &&
-      isProblemLoading &&
-      !problemRecord &&
-      !(activeFile?.description || activeFile?.solutionEntries?.length));
+    (!isNotesFile && !!id && !hasRenderableProblemData && isProblemLoading);
 
   if (showProblemSkeleton) {
     return <ProblemEditorSkeleton />;
@@ -312,7 +351,9 @@ const ProblemEditorPage = () => {
         tags: problemData.tags,
       });
 
-      await useFileStore.getState().renameItem(activeFile.id, problemData.title);
+      await useFileStore
+        .getState()
+        .renameItem(activeFile.id, problemData.title);
       await useFileStore.getState().setActiveFile(activeFile.id);
     } catch (error) {
       console.error("Failed to import problem:", error);
@@ -359,7 +400,9 @@ const ProblemEditorPage = () => {
       return;
     }
 
-    const nextEntries = solutionEntries.filter((entry) => entry.id !== solutionId);
+    const nextEntries = solutionEntries.filter(
+      (entry) => entry.id !== solutionId,
+    );
     await persistSolutionEntries(nextEntries);
 
     if (activeTab === solutionId) {
@@ -367,22 +410,34 @@ const ProblemEditorPage = () => {
     }
   };
 
-  const handlePrevProblem = async () => {
+  const handlePrevProblem = () => {
     if (!previousProblem) {
       return;
     }
 
-    await setActiveFile(previousProblem.id);
+    setIsNavigatingProblem(true);
+    setNavigatingDirection("prev");
+    const cached = peekProblemCache(previousProblem.id);
+    if (cached) {
+      setProblemRecord(cached);
+    }
     navigate(`/problem/${previousProblem.id}`);
+    void setActiveFile(previousProblem.id);
   };
 
-  const handleNextProblem = async () => {
+  const handleNextProblem = () => {
     if (!nextProblem) {
       return;
     }
 
-    await setActiveFile(nextProblem.id);
+    setIsNavigatingProblem(true);
+    setNavigatingDirection("next");
+    const cached = peekProblemCache(nextProblem.id);
+    if (cached) {
+      setProblemRecord(cached);
+    }
     navigate(`/problem/${nextProblem.id}`);
+    void setActiveFile(nextProblem.id);
   };
 
   if (isNotesFile) {
@@ -435,12 +490,15 @@ const ProblemEditorPage = () => {
             <div className="min-h-0 flex-1 bg-[#1e1e1e]">
               <CodeEditor
                 code={
-                  solutionEntries.find((entry) => entry.id === activeTab)?.code || ""
+                  solutionEntries.find((entry) => entry.id === activeTab)
+                    ?.code || ""
                 }
                 language="javascript"
                 onChange={(newCode) => {
                   const nextEntries = solutionEntries.map((entry) =>
-                    entry.id === activeTab ? { ...entry, code: newCode } : entry,
+                    entry.id === activeTab
+                      ? { ...entry, code: newCode }
+                      : entry,
                   );
                   setProblemRecord((current) => ({
                     ...(current || {}),
@@ -460,6 +518,8 @@ const ProblemEditorPage = () => {
               hasPrev={Boolean(previousProblem)}
               onNext={handleNextProblem}
               hasNext={Boolean(nextProblem)}
+              isNavigating={isNavigatingProblem}
+              navigatingDirection={navigatingDirection}
             />
           </div>
         </Panel>

@@ -1,9 +1,7 @@
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
+require("./config/env");
 const sequelize = require("./src/config/database");
-require("dotenv").config({ path: path.resolve(__dirname, "../../../.env") });
-require("dotenv").config();
 
 // Import models to register them with Sequelize
 require("./src/models/LearningSheet");
@@ -18,27 +16,6 @@ const isProduction = process.env.NODE_ENV === "production";
 const parsedPort = Number(PORT);
 if (!Number.isInteger(parsedPort) || parsedPort <= 0) {
   throw new Error(`[youtube-playlist-service] Invalid port value: ${PORT}`);
-}
-
-const missingVars = ["DATABASE_URL", "YOUTUBE_API_KEY"].filter(
-  (key) => !String(process.env[key] || "").trim(),
-);
-
-if (missingVars.length > 0) {
-  throw new Error(
-    `[youtube-playlist-service] Missing required env vars: ${missingVars.join(
-      ", ",
-    )}`,
-  );
-}
-
-if (
-  !String(process.env.OPENROUTER_API_KEY || "").trim() &&
-  !String(process.env.OPENAI_API_KEY || "").trim()
-) {
-  throw new Error(
-    "[youtube-playlist-service] Missing AI API key. Set OPENROUTER_API_KEY or OPENAI_API_KEY.",
-  );
 }
 
 app.use(cors());
